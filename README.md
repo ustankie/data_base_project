@@ -10,5 +10,5 @@ AGH UST data bases project
 
 ## Project content
 
-* [functionality]()
+* [functionality](functionality.md)
   
