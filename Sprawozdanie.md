@@ -124,4 +124,4 @@ Funkcje managera i sekretarza + dodatkowo:
 * po zakończeniu transakcji przesłanie informacji zwrotnej o pomyślnym zakończeniu płatności lub błędzie.
 
 ## Schemat
-![Schemat_1](https://github.com/ustankie/data_base_project/assets/131200367/7aae83fa-0fda-45c6-9f76-9d3b86b2e8c6)
+![Schemat_1](Schemat_1.png)
