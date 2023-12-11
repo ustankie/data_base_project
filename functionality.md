@@ -615,3 +615,239 @@ create table StudiesMeetings
 )
 go
 ```
+## Dane testowe
+
+### Academics
+| academic_id |
+|-------------|
+| 2           |
+| 8           |
+| 10          |
+| 12          |
+| 21          |
+
+### Apprenticeship
+
+
+### Clients
+| client_id |
+|-----------|
+| 1         |
+| 3         |
+| 4         |
+| 5         |
+| 6         |
+| 7         |
+| 9         |
+| 11        |
+| 13        |
+| 15        |
+
+### Courses
+| product_id | course_name                     | start_date | end_date   | participants_limit | advance_price | full_price |
+|------------|---------------------------------|------------|------------|--------------------|---------------|------------|
+| 2          | SQL for begineers               | 2022-12-12 | 2023-02-20 | 15                 | 500           | 2500       |
+| 6          | SQL for intermediate            | 2024-03-20 | 2024-06-30 | 10                 | 1000          | 3000       |
+| 10         | Python algoritms and structures | 2023-10-10 | 2024-01-20 | 25                 | 1500          | 4000       |
+| 14         | UNIX comends                    | 2024-01-05 | 2024-01-31 | 20                 | 250           | 1000       |
+
+### CoursesParticipants
+| participant_id | client_id | product_id |
+|----------------|-----------|------------|
+| 1              | 1         | 2          |
+| 2              | 1         | 6          |
+| 3              | 4         | 2          |
+| 4              | 4         | 6          |
+| 5              | 7         | 10         |
+| 6              | 7         | 14         |
+| 7              | 1         | 10         |
+| 8              | 1         | 14         |
+| 9              | 11        | 10         |
+| 10             | 15        | 10         |
+| 11             | 5         | 10         |
+| 12             | 13        | 10         |
+| 13             | 9         | 10         |
+| 14             | 3         | 10         |
+
+### Exams
+
+### Interpreted_language
+| interpreter_id | translate_from | translate_to |
+|----------------|----------------|--------------|
+| 14             | 2              | 1            |
+| 14             | 2              | 3            |
+| 14             | 3              | 1            |
+| 22             | 4              | 1            |
+
+### Interpreters
+| interpreter_id |
+|----------------|
+| 14             |
+| 22             |
+
+### Languages
+| language_id | language_name |
+|-------------|---------------|
+| 1           | Polish        |
+| 2           | German        |
+| 3           | English       |
+| 4           | Italian       |
+
+### MeetingParticipants
+
+### MeetingType
+| type_id | type_name |
+|---------|-----------|
+| 1       | on-line   |
+| 2       | in-person |
+| 3       | hybrid    |
+
+### Modules
+| module_id | product_id | module_name         | module_type | classroom | start_date | end_date   |
+|-----------|------------|---------------------|-------------|-----------|------------|------------|
+| 1         | 2          | Primary Keys        | 2           | 10        | 2022-12-12 | 2022-12-14 |
+| 2         | 2          | Basic commands      | 1           | NULL      | 2022-12-19 | 2022-12-20 |
+| 3         | 2          | The basics of joins | 1           | NULL      | 2023-01-04 | 2023-01-10 |
+| 4         | 2          | Exercises           | 1           | NULL      | 2023-01-15 | 2023-02-20 |
+| 5         | 6          | Group by your data  | 2           | 15        | 2024-03-20 | 2024-04-20 |
+| 6         | 6          | Sort your data      | 2           | 15        | 2024-04-25 | 2024-04-30 |
+| 7         | 6          | Exercices           | 1           | NULL      | 2024-05-01 | 2024-06-30 |
+| 8         | 10         | Sorting algoritms   | 2           | 20        | 2023-10-10 | 2023-11-10 |
+| 9         | 10         | Graph Algoritms     | 3           | 15        | 2023-11-15 | 2023-12-15 |
+| 10        | 10         | Dynamic Programming | 2           | 20        | 2023-12-20 | 2024-01-20 |
+| 11        | 14         | Files and folders   | 1           | NULL      | 2024-01-05 | 2024-01-10 |
+| 12        | 14         | Grep and awk        | 1           | NULL      | 2024-01-11 | 2024-01-20 |
+| 13        | 14         | Bash and regex      | 1           | NULL      | 2024-01-21 | 2024-01-31 |
+
+### ModulesAttendance
+| participant_id | module_id | presence |
+|----------------|-----------|----------|
+| 1              | 1         | 1        |
+| 1              | 2         | 1        |
+| 1              | 3         | 1        |
+| 1              | 4         | 1        |
+| 3              | 1         | 1        |
+| 3              | 2         | 0        |
+| 3              | 3         | 0        |
+| 3              | 4         | 1        |
+| 5              | 8         | 1        |
+| 5              | 9         | 1        |
+| 7              | 8         | 1        |
+| 7              | 9         | 1        |
+| 9              | 8         | 1        |
+| 9              | 9         | 1        |
+| 10             | 8         | 1        |
+| 10             | 9         | 0        |
+| 11             | 8         | 1        |
+| 11             | 9         | 1        |
+| 12             | 8         | 1        |
+| 12             | 9         | 1        |
+| 13             | 8         | 1        |
+| 13             | 9         | 1        |
+| 14             | 8         | 1        |
+| 14             | 9         | 1        |
+
+### Payments
+
+### Products
+| product_id | product_type_id | language | academic_id | interpreter_id | translated_to |
+|------------|-----------------|----------|-------------|----------------|---------------|
+| 1          | 1               | 3        | 8           | NULL           | NULL          |
+| 2          | 2               | 2        | 2           | 14             | 1             |
+| 3          | 1               | 4        | 10          | 22             | 1             |
+| 4          | 3               | 1        | 21          | NULL           | NULL          |
+| 5          | 1               | 3        | 2           | NULL           | NULL          |
+| 6          | 2               | 4        | 8           | 22             | 1             |
+| 7          | 4               | 2        | 10          | 14             | 3             |
+| 8          | 3               | 1        | 12          | NULL           | NULL          |
+| 9          | 1               | 3        | 12          | NULL           | NULL          |
+| 10         | 2               | 2        | 2           | NULL           | NULL          |
+| 11         | 4               | 4        | 10          | NULL           | NULL          |
+| 12         | 3               | 1        | 21          | NULL           | NULL          |
+| 13         | 1               | 3        | 21          | NULL           | NULL          |
+| 14         | 2               | 4        | 2           | NULL           | NULL          |
+| 15         | 4               | 2        | 8           | 14             | 3             |
+| 16         | 3               | 2        | 2           | NULL           | NULL          |
+| 17         | 1               | 1        | 8           | 14             | 1             |
+| 18         | 2               | 1        | 8           | 22             | 3             |
+| 19         | 3               | 2        | 10          | NULL           | NULL          |
+| 20         | 3               | 3        | 12          | NULL           | NULL          |
+
+### ProductType
+| procduct_type_id | product_type_name |
+|------------------|-------------------|
+| 1                | webinar           |
+| 2                | course            |
+| 3                | studies           |
+| 4                | meeting           |
+
+### Studies
+
+### StudiesMeetings
+
+### StudiesParticipants
+
+### User_type
+| user_type | type_name   |
+|-----------|-------------|
+| 1         | client      |
+| 2         | academic    |
+| 3         | interpreter |
+| 4         | owner       |
+| 5         | manager     |
+| 6         | secretary   |
+### Users
+| user_id | first_name | last_name   | zip_code | city        | street_address             | country | can_pay_days_later | user_type |
+|---------|------------|-------------|----------|-------------|----------------------------|---------|--------------------|-----------|
+| 1       | Jan        | Nowak       | 00-001   | Warsaw      | ul. Prosta 5               | Poland  | 0                  | 1         |
+| 2       | Hans       | Müller      | 10115    | Berlin      | Unter den Linden 15        | Germany | 0                  | 2         |
+| 3       | John       | Smith       | 10001    | New York    | 123 Main St                | USA     | 0                  | 1         |
+| 4       | Alice      | Williams    | SW1A 1AA | London      | Buckingham Palace Rd       | England | 0                  | 1         |
+| 5       | Giuseppe   | Rossi       | 00100    | Rome        | Via del Corso 10           | Italy   | 0                  | 1         |
+| 6       | Katarzyna  | Kowalska    | 03-040   | Krakow      | ul. Glówna 20              | Poland  | 0                  | 1         |
+| 7       | Lukas      | Schmidt     | 10178    | Berlin      | Alexanderplatz 1           | Germany | 0                  | 1         |
+| 8       | Emily      | Jones       | 90210    | Los Angeles | 345 Maple St               | USA     | 0                  | 2         |
+| 9       | Sophie     | Taylor      | SW1A 1BA | London      | Westminster Bridge Rd      | England | 0                  | 1         |
+| 10      | Luca       | Bianchi     | 00144    | Rome        | Via Appia Nuova 25         | Italy   | 0                  | 2         |
+| 11      | Marek      | Wozniak     | 50-001   | Wroclaw     | ul. Rynek 1                | Poland  | 0                  | 1         |
+| 12      | Elena      | Schneider   | 60311    | Frankfurt   | Hauptwache 6               | Germany | 0                  | 2         |
+| 13      | Michael    | Brown       | 33101    | Miami       | 678 Ocean Dr               | USA     | 0                  | 1         |
+| 14      | Olivia     | Smith       | SW1A 1AB | London      | Buckingham Gate 12         | England | 0                  | 3         |
+| 15      | Giovanni   | Ferrari     | 00192    | Rome        | Via della Conciliazione 50 | Italy   | 7                  | 1         |
+| 16      | Karolina   | Lewandowska | 02-020   | Warsaw      | ul. Kwiatowa 7             | Poland  | 0                  | 4         |
+| 17      | Mateusz    | Kowalczyk   | 50-500   | Wroclaw     | ul. Piekna 12              | Poland  | 0                  | 5         |
+| 18      | Adrian     | Szymanski   | 80-080   | Gdansk      | ul. Morska 3               | Poland  | 0                  | 6         |
+| 19      | Ewa        | Jankowska   | 01-010   | Lodz        | ul. Ogrodowa 25            | Poland  | 0                  | 6         |
+| 20      | Mikolaj    | Wójcik      | 33-330   | Krakow      | ul. Slowackiego 10         | Poland  | 0                  | 5         |
+| 21      | Aleksandra | Dabrowska   | 03-030   | Warsaw      | ul. Lipowa 8               | Poland  | 0                  | 2         |
+| 22      | Andrzej    | Kowalczyk   | 50-501   | Wroclaw     | ul. Zielona 14             | Poland  | 0                  | 3         |
+| 23      | Welby      | Churchouse  | 22300    | Dallas      | Hunt St 10                 | USA     | 0                  | 1         |
+| 24      | Ive        | Boyington   | 10550    | Hamburg     | Alter Vall 43              | Germany | 0                  | 1         |
+| 25      | Eric       | Warren      | 90543    | Brema       | Neuenstrasse 12            | Germany | 0                  | 6         |
+| 26      | Vincent    | Cunningham  | 15250    | Vancouver   | Davie St 12                | Canada  | 0                  | 1         |
+| 27      | Janina     | Wiśniowska  | 43-442   | Szczeciń    | ul. Długa 15               | Poland  | 0                  | 2         |
+| 28      | John       | Richardson  | 32455    | Florencja   | via Palazzulo 95           | Italy   | 0                  | 5         |
+| 29      | Alexander  | Fowler      | 43533    | Neapol      | Via Campania 5             | Italy   | 0                  | 1         |
+| 30      | Andrzej    | Bogdański   | 35-234   | Gdańsk      | ul. Portowa 41             | Poland  | 0                  | 1         |
+
+### WebinarParticipants
+| product_id | client_id |
+|------------|-----------|
+| 1          | 1         |
+| 1          | 3         |
+| 5          | 3         |
+| 9          | 3         |
+| 13         | 4         |
+| 9          | 7         |
+| 9          | 9         |
+| 5          | 11        |
+| 9          | 13        |
+| 1          | 15        |
+
+### Webinars
+| product_id | webinar_name                      | posted_date | price |
+|------------|-----------------------------------|-------------|-------|
+| 1          | Present Simple for beginners      | 2023-12-02  | NULL  |
+| 5          | Cooking is fun                    | 2023-01-01  | 50    |
+| 9          | Robotics for children             | 2023-10-11  | 60    |
+| 13         | Advanced constructions in English | 2023-12-10  | NULL  |
