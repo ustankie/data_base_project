@@ -138,18 +138,24 @@ Główna część systemu
 Zawiera wszystkich użytkowników systemu oraz ich dane - imię, nazwisko, dane adresowe oraz typ użytkownika (klucz obcy do tabeli User_types), a także informację o tym, ile dni opóźnienia w płatności jest dozwolone danemu użytkownikowi.
 
 ```sql
-CREATE TABLE Users (
-   user_id int  NOT NULL,
-   first_name nvarchar  NOT NULL,
-   last_name nvarchar  NOT NULL,
-   zip_code nvarchar(10)  NOT NULL,
-   city nvarchar  NOT NULL,
-   street_address nvarchar  NOT NULL,
-   country nvarchar(50)  NOT NULL,
-   can_pay_days_later int  NOT NULL DEFAULT 0,
-   user_type int  NOT NULL,
-   CONSTRAINT client_id PRIMARY KEY (user_id)
-);
+create table Users
+(
+    user_id            int                                  not null
+        constraint user_id
+            primary key,
+    first_name         nvarchar(50)                         not null,
+    last_name          nvarchar(50)                         not null,
+    zip_code           nvarchar(10)                         not null,
+    city               nvarchar(50)                         not null,
+    street_address     nvarchar(50)                         not null,
+    country            nchar(50)                            not null,
+    can_pay_days_later int
+        constraint DF__Users__can_pay_d__719CDDE7 default 0 not null,
+    user_type          int                                  not null
+        constraint User_types_Users
+            references User_types
+)
+go
 ```
 
 #### Academics
@@ -157,10 +163,15 @@ CREATE TABLE Users (
 Zawiera id wszystkich użytkowników, którzy są nauczycielami - zdecydowaliśmy się na dodanie tabel Academics, Interpreters i Clients, by rozdzielić logikę wykonywaną dla poszczególnych typów użytkownika.
 
 ```sql
-CREATE TABLE Academics (
-   academic_id int  NOT NULL,
-   CONSTRAINT Academics_pk PRIMARY KEY  (academic_id)
-);
+create table Academics
+(
+    academic_id int not null
+        constraint Academics_pk
+            primary key
+        constraint FK_Academics_Users
+            references Users
+)
+go
 ```
 
 #### Interpreters
@@ -168,10 +179,16 @@ CREATE TABLE Academics (
 Zawiera id wszystkich tłumaczy
 
 ```sql
-CREATE TABLE Interpreters (
-   interpreter_id int  NOT NULL,
-   CONSTRAINT Interpreters_pk PRIMARY KEY  (interpreter_id)
-);
+create table Interpreters
+(
+    interpreter_id int not null
+        constraint Interpreters_pk
+            primary key
+        constraint Interpreters_Users
+            references Users
+)
+go
+
 ```
 
 #### Clients
@@ -179,10 +196,15 @@ CREATE TABLE Interpreters (
 Zawiera id wszystkich klientów
 
 ```sql
-CREATE TABLE Clients (
-   client_id int  NOT NULL,
-   CONSTRAINT client_id PRIMARY KEY  (client_id)
-);
+create table Clients
+(
+    client_id int not null
+        constraint client_id
+            primary key
+        constraint Clients_Users
+            references Users
+)
+go
 ```
 
 #### User_types
@@ -190,11 +212,14 @@ CREATE TABLE Clients (
 Zawiera listę wszystkich typów użytkowników występujących w systemie
 
 ```sql
-CREATE TABLE User_types (
-   user_type int  NOT NULL,
-   type_name nvarchar(50)  NOT NULL,
-   CONSTRAINT User_types_pk PRIMARY KEY  (user_type)
-);  
+create table User_types
+(
+    user_type int          not null
+        constraint User_types_pk
+            primary key,
+    type_name nvarchar(50) not null
+)
+go
 ```
 
 #### Interpreted_languages
@@ -202,12 +227,21 @@ CREATE TABLE User_types (
 Każdemu tłumaczowi przyporządkowuje informację o tym, z jakiego języka na jaki tłumaczy (są to FK do tabeli languages)
 
 ```sql
-CREATE TABLE Interpreted_languages (
-   interpreter_id int  NOT NULL,
-   translate_from int  NOT NULL,
-   translate_to int  NOT NULL,
-   CONSTRAINT Interpreted_languages_pk PRIMARY KEY  (interpreter_id,translate_from,translate_to)
-);
+create table Interpreted_languages
+(
+    interpreter_id int not null
+        constraint Interpreted_languages_Interpreters
+            references Interpreters,
+    translate_from int not null
+        constraint FK_Interpreted_languages_Languages
+            references Languages,
+    translate_to   int not null
+        constraint FK_Interpreted_languages_Languages1
+            references Languages,
+    constraint Interpreted_languages_pk
+        primary key (interpreter_id, translate_from, translate_to)
+)
+go
 ```
 
 #### Languages
@@ -215,11 +249,14 @@ CREATE TABLE Interpreted_languages (
 Lista wszystkich języków, w jakich prowadzone są szkolenia, bądź na jakie są one tłumaczone
 
 ```sql
-CREATE TABLE Languages (
-   language_id int  NOT NULL,
-   language_name nvarchar(50)  NOT NULL,
-   CONSTRAINT Languages_pk PRIMARY KEY  (language_id)
-);
+create table Languages
+(
+    language_id   int          not null
+        constraint PK_Languages
+            primary key,
+    language_name nvarchar(50) not null
+)
+go
 ```
 
 #### Products
@@ -227,15 +264,28 @@ CREATE TABLE Languages (
 Zawiera wszystkie produkty, informację o ich typie (odwołanie do tabeli ProductType), języku w jakim jest prowadzone dane szkolenie, wykładowcy, który je prowadzi oraz o tłumaczu i języku, na który tłumaczone jest szkolenie
 
 ```sql
-CREATE TABLE Products (
-   product_id int  NOT NULL,
-   product_type_id int  NOT NULL,
-   language int  NOT NULL,
-   academic_id int  NOT NULL,
-   interpreter_id int  NULL,
-   translated_to int  NULL,
-   CONSTRAINT Products_pk PRIMARY KEY  (product_id)
-);
+create table Products
+(
+    product_id      int not null
+        constraint Products_pk
+            primary key,
+    product_type_id int not null
+        constraint Products_ProductType
+            references ProductType,
+    language        int not null
+        constraint FK_Products_Languages
+            references Languages,
+    academic_id     int not null
+        constraint FK_Products_Academics
+            references Academics,
+    interpreter_id  int
+        constraint FK_Products_Interpreters1
+            references Interpreters,
+    translated_to   int
+        constraint FK_Products_Languages1
+            references Languages
+)
+go
 ```
 
 #### ProductType
@@ -243,11 +293,15 @@ CREATE TABLE Products (
 Zawiera wszystkie typy produktów (webinary, spotkania, kursy, studia)
 
 ```sql
-CREATE TABLE ProductType (
-   procduct_type_id int  NOT NULL,
-   product_type_name nvarchar  NOT NULL,
-   CONSTRAINT ProductType_pk PRIMARY KEY  (procduct_type_id)
-);
+create table ProductType
+(
+    procduct_type_id  int          not null
+        constraint ProductType_pk
+            primary key,
+    product_type_name nvarchar(50) not null
+)
+go
+
 ```
 
 #### BucketProducts
@@ -255,12 +309,19 @@ CREATE TABLE ProductType (
 Zawiera informację o produktach wrzuconych do koszyka przez klientów
 
 ```sql
-CREATE TABLE BucketProducts (
-   bucket_entry_id int  NOT NULL,
-   client_id int  NOT NULL,
-   product_id int  NOT NULL,
-   CONSTRAINT BucketProducts_pk PRIMARY KEY  (bucket_entry_id)
-);
+create table BucketProducts
+(
+    bucket_entry_id int not null
+        constraint BucketProducts_pk
+            primary key,
+    client_id       int not null
+        constraint BucketItems_Clients
+            references Clients,
+    product_id      int not null
+        constraint BucketItems_ProductType
+            references Products
+)
+go
 ```
 
 #### Payments
@@ -268,16 +329,23 @@ CREATE TABLE BucketProducts (
 Spis wszystkich płatności (numer klienta, data płatności, wpłacona kwota, informacja czy kwota jest zaliczką, informacja czy płatność została anulowana)
 
 ```sql
-CREATE TABLE Payments (
-   payment_id int  NOT NULL,
-   product_id int  NOT NULL,
-   client_id int  NOT NULL,
-   payment_date date  NOT NULL,
-   is_advance bit  NOT NULL,
-   cancelled bit  NOT NULL,
-   price int  NOT NULL,
-   CONSTRAINT Payments_pk PRIMARY KEY  (payment_id)
-);
+create table Payments
+(
+    payment_id   int  not null
+        constraint Payments_pk
+            primary key,
+    product_id   int  not null
+        constraint Payments_Products
+            references Products,
+    client_id    int  not null
+        constraint Clients_Payments
+            references Clients,
+    payment_date date not null,
+    is_advance   bit  not null,
+    cancelled    bit  not null,
+    price        int  not null
+)
+go
 ```
 
 #### MeetingType
@@ -285,11 +353,14 @@ CREATE TABLE Payments (
 Rodzaje spotkań (online, hybrydowe, stacjonarne)
 
 ```sql
-CREATE TABLE MeetingType (
-   type_id int  NOT NULL,
-   type_name nvarchar  NOT NULL,
-   CONSTRAINT type_id PRIMARY KEY  (type_id)
-);
+create table MeetingType
+(
+    type_id   int          not null
+        constraint type_id
+            primary key,
+    type_name nvarchar(50) not null
+)
+go
 ```
 
 ### 3.2. Webinars
@@ -299,13 +370,18 @@ CREATE TABLE MeetingType (
 Lista wszystkich webinarów wraz z ich nazwami, datą publikacji i ceną
 
 ```sql
-CREATE TABLE Webinars (
-   product_id int  NOT NULL,
-   webinar_name nvarchar  NOT NULL,
-   posted_date date  NOT NULL,
-   price int  NULL,
-   CONSTRAINT product_id PRIMARY KEY  (product_id)
-);
+create table Webinars
+(
+    product_id   int          not null
+        constraint product_id_webinars
+            primary key
+        constraint Webinars_Products
+            references Products,
+    webinar_name nvarchar(50) not null,
+    posted_date  date         not null,
+    price        int
+)
+go
 ```
 
 #### WebinarParticipants
@@ -313,11 +389,18 @@ CREATE TABLE Webinars (
 Lista uczestników poszczególnych webinarów
 
 ```sql
-CREATE TABLE WebinarParticipants (
-   product_id int  NOT NULL,
-   client_id int  NOT NULL,
-   CONSTRAINT WebinarParticipants_pk PRIMARY KEY  (client_id,product_id)
-);
+create table WebinarParticipants
+(
+    product_id int not null
+        constraint WebinarParticipants_Webinars
+            references Webinars,
+    client_id  int not null
+        constraint FK_WebinarParticipants_Clients
+            references Clients,
+    constraint WebinarParticipants_pk
+        primary key (client_id, product_id)
+)
+go
 ```
 
 ### 3.3. Courses
@@ -327,16 +410,22 @@ CREATE TABLE WebinarParticipants (
 Lista kursów wraz z ich nazwami, datami początku i końca kursu, limitem uczestników, ceną zaliczki oraz pełną ceną
 
 ```sql
-CREATE TABLE Courses (
-   product_id int  NOT NULL,
-   course_name nvarchar  NOT NULL,
-   start_date date  NOT NULL,
-   end_date date  NOT NULL,
-   participants_limit int  NOT NULL,
-   advance_price int  NOT NULL,
-   full_price int  NOT NULL,
-   CONSTRAINT product_id PRIMARY KEY  (product_id)
-);
+create table Courses
+(
+    product_id         int          not null
+        constraint product_id
+            primary key
+        constraint FK_Courses_Products
+            references Products,
+    course_name        nvarchar(50) not null,
+    start_date         date         not null,
+    end_date           date         not null,
+    participants_limit int          not null,
+    advance_price      int          not null,
+    full_price         int          not null
+)
+go
+
 ```
 
 #### CoursesParticipants
@@ -344,12 +433,19 @@ CREATE TABLE Courses (
 Lista uczestników poszczególnych kursów
 
 ```sql
-CREATE TABLE CoursesParticipants (
-   participant_id int  NOT NULL,
-   client_id int  NOT NULL,
-   product_id int  NOT NULL,
-   CONSTRAINT CoursesParticipants_pk PRIMARY KEY  (participant_id)
-);
+create table CoursesParticipants
+(
+    participant_id int not null
+        constraint CoursesParticipants_pk
+            primary key,
+    client_id      int not null
+        constraint CursesParticipants_Clients
+            references Clients,
+    product_id     int not null
+        constraint CoursesParticipants_Courses
+            references Courses
+)
+go
 ```
 
 
@@ -358,16 +454,23 @@ CREATE TABLE CoursesParticipants (
 Lista modułów kursów z nazwami, typem modułu (odwołanie do tabeli MeetingType), numerem sali oraz datą rozpoczęcia i zakończenia modułu
 
 ```sql
-CREATE TABLE Modules (
-   module_id int  NOT NULL,
-   product_id int  NOT NULL,
-   module_name varchar(50)  NOT NULL,
-   module_type int  NOT NULL,
-   classroom int  NULL,
-   start_date date  NOT NULL,
-   end_date date  NOT NULL,
-   CONSTRAINT Modules_pk PRIMARY KEY  (module_id)
-);
+create table Modules
+(
+    module_id   int         not null
+        constraint Modules_pk
+            primary key,
+    product_id  int         not null
+        constraint Courses_Modules
+            references Courses,
+    module_name varchar(50) not null,
+    module_type int         not null
+        constraint Modules_MeetingType
+            references MeetingType,
+    classroom   int,
+    start_date  date        not null,
+    end_date    date        not null
+)
+go
 ```
 
 #### ModulesAttendance
@@ -375,12 +478,20 @@ CREATE TABLE Modules (
 Zawiera listę obecności uczestników kursów na poszczególnych modułach
 
 ```sql
-CREATE TABLE ModulesAttendance (
-   participant_id int  NOT NULL,
-   module_id int  NOT NULL,
-   presence bit  NOT NULL,
-   CONSTRAINT ModulesAttendance_pk PRIMARY KEY  (participant_id,module_id)
-);
+create table ModulesAttendance
+(
+    participant_id int not null
+        constraint FK_ModulesAttendance_CoursesParticipants
+            references CoursesParticipants,
+    module_id      int not null
+        constraint ModulesAttendance_Modules
+            references Modules,
+    presence       bit not null,
+    constraint PK_ModulesAttendance
+        primary key (participant_id, module_id)
+)
+go
+
 ```
 
 ### 3.4. Studies
@@ -390,13 +501,18 @@ CREATE TABLE ModulesAttendance (
 Zawiera listę produktów typu "studia", nazwę studiów, limit uczestników oraz wysokość wpisowego
 
 ```sql
-CREATE TABLE Studies (
-   product_id int  NOT NULL,
-   name nvarchar  NOT NULL,
-   participants_limit int  NOT NULL,
-   entry_fee int  NOT NULL,
-   CONSTRAINT studies_id PRIMARY KEY  (product_id)
-);
+create table Studies
+(
+    product_id         int          not null
+        constraint studies_id
+            primary key
+        constraint Studies_Products
+            references Products,
+    name               nvarchar(50) not null,
+    participants_limit int          not null,
+    entry_fee          int          not null
+)
+go
 ```
 
 #### StudiesParticipants
@@ -404,26 +520,37 @@ CREATE TABLE Studies (
 Zawiera uczestników poszczególnych studiów
 
 ```sql
-CREATE TABLE StudiesParticipants (
-   participant_id int  NOT NULL,
-   client_id int  NOT NULL,
-   product_id int  NOT NULL,
-   CONSTRAINT participant_id PRIMARY KEY  (participant_id)
-);
+create table StudiesParticipants
+(
+    participant_id int not null
+        constraint participant_id_studies_participants
+            primary key,
+    client_id      int not null
+        constraint StudiesParticipants_Clients
+            references Clients,
+    product_id     int not null
+        constraint StudiesParticipants_Studies
+            references Studies
+)
+go
 ```
 #### Exams
 
 Zawiera wyniki z egzaminów poszczególnych uczestników, datę napisania egzaminu oraz zdobyte punkty
 
 ```sql
-CREATE TABLE Exams (
-   exam_id int  NOT NULL,
-   participant_id int  NOT NULL,
-   date int  NOT NULL,
-   points int  NOT NULL,
-   CONSTRAINT participant_id UNIQUE (participant_id),
-   CONSTRAINT Exams_pk PRIMARY KEY  (exam_id,participant_id)
-);
+create table Exams
+(
+    exam_id        int not null,
+    participant_id int not null
+        constraint Exams_StudiesParticipants
+            references StudiesParticipants,
+    date           int not null,
+    points         int not null,
+    constraint Exams_pk
+        primary key (exam_id, participant_id)
+)
+go
 ```
 
 #### Apprenticeship
@@ -431,11 +558,16 @@ CREATE TABLE Exams (
 Zawiera uczestników, którzy odbyli praktyki w określonym terminie
 
 ```sql
-CREATE TABLE Apprenticeship (
-   participant_id int  NOT NULL,
-   date date  NOT NULL,
-   CONSTRAINT participant_id PRIMARY KEY  (participant_id,date)
-);
+create table Apprenticeship
+(
+    participant_id int  not null
+        constraint Apprenticeship_StudiesParticipants
+            references StudiesParticipants,
+    date           date not null,
+    constraint participant_id
+        primary key (participant_id, date)
+)
+go
 ```
 
 #### MeetingParticipants
@@ -443,11 +575,19 @@ CREATE TABLE Apprenticeship (
 Zawiera listę obecnych studentów na danych spotkaniach
 
 ```sql
-CREATE TABLE MeetingParticipants (
-   meeting_id int  NOT NULL,
-   participant_id int  NOT NULL,
-   CONSTRAINT meeting_id PRIMARY KEY  (meeting_id)
-);
+create table MeetingParticipants
+(
+    meeting_id     int not null
+        constraint FK_MeetingParticipants_StudiesMeetings
+            references StudiesMeetings,
+    participant_id int not null
+        constraint MeetingParticipants_StudiesParticipants
+            references StudiesParticipants,
+    constraint meeting_id
+        primary key (meeting_id, participant_id)
+)
+go
+
 ```
 
 #### StudiesMeetings
@@ -455,14 +595,23 @@ CREATE TABLE MeetingParticipants (
 Lista spotkań poszczególnych studiów, data spotkania, typ spotkania (FK do MeetingTypes), limit uczestników spotkania, cena dla studentów, cena dla uczestników, którzy nie są studentami
 
 ```sql
-CREATE TABLE StudiesMeetings (
-   meeting_id int  NOT NULL,
-   studies_id int  NOT NULL,
-   date date  NOT NULL,
-   type_id int  NOT NULL,
-   participants_limit int  NOT NULL,
-   student_price int  NOT NULL,
-   outer_participant_price int  NOT NULL,
-   CONSTRAINT meeting_id PRIMARY KEY  (meeting_id)
-);
+create table StudiesMeetings
+(
+    meeting_id              int  not null
+        constraint meeting_id_studies_meetings
+            primary key
+        constraint StudiesMeetings_Products
+            references Products,
+    studies_id              int  not null
+        constraint StudiesMeetings_Studies
+            references Studies,
+    date                    date not null,
+    type_id                 int  not null
+        constraint StudiesMeetings_MeetingType
+            references MeetingType,
+    participants_limit      int  not null,
+    student_price           int  not null,
+    outer_participant_price int  not null
+)
+go
 ```
