@@ -125,7 +125,7 @@ Funkcje managera i sekretarza + dodatkowo:
 
 ## 2. Schemat bazy danych
 
-![schemat](Systemy_Baz_Danych_2023_2024_–_projekt-2023-12-11_17-59.svg)
+![schemat](Systemy_Baz_Danych_2023_2024_–_projekt-2023-12-11_23-49.svg)
 
 ## 3. Implementacje tabel
 
@@ -331,19 +331,19 @@ Spis wszystkich płatności (numer klienta, data płatności, wpłacona kwota, i
 ```sql
 create table Payments
 (
-    payment_id   int  not null
+    payment_id   int   not null
         constraint Payments_pk
             primary key,
-    product_id   int  not null
+    product_id   int   not null
         constraint Payments_Products
             references Products,
-    client_id    int  not null
+    client_id    int   not null
         constraint Clients_Payments
             references Clients,
-    payment_date date not null,
-    is_advance   bit  not null,
-    cancelled    bit  not null,
-    price        int  not null
+    payment_date date  not null,
+    is_advance   bit   not null,
+    cancelled    bit   not null,
+    price        money not null
 )
 go
 ```
@@ -379,9 +379,10 @@ create table Webinars
             references Products,
     webinar_name nvarchar(50) not null,
     posted_date  date         not null,
-    price        int
+    price        money
 )
 go
+
 ```
 
 #### WebinarParticipants
@@ -421,8 +422,8 @@ create table Courses
     start_date         date         not null,
     end_date           date         not null,
     participants_limit int          not null,
-    advance_price      int          not null,
-    full_price         int          not null
+    advance_price      money        not null,
+    full_price         money        not null
 )
 go
 
@@ -510,7 +511,8 @@ create table Studies
             references Products,
     name               nvarchar(50) not null,
     participants_limit int          not null,
-    entry_fee          int          not null
+    advance_price      money        not null,
+    full_price         money        not null,
 )
 go
 ```
@@ -541,12 +543,12 @@ Zawiera wyniki z egzaminów poszczególnych uczestników, datę napisania egzami
 ```sql
 create table Exams
 (
-    exam_id        int not null,
-    participant_id int not null
+    exam_id        int  not null,
+    participant_id int  not null
         constraint Exams_StudiesParticipants
             references StudiesParticipants,
-    date           int not null,
-    points         int not null,
+    date           date not null,
+    points         int,
     constraint Exams_pk
         primary key (exam_id, participant_id)
 )
@@ -597,51 +599,59 @@ Lista spotkań poszczególnych studiów, data spotkania, typ spotkania (FK do Me
 ```sql
 create table StudiesMeetings
 (
-    meeting_id              int  not null
+    meeting_id              int   not null
         constraint meeting_id_studies_meetings
             primary key
         constraint StudiesMeetings_Products
             references Products,
-    studies_id              int  not null
+    studies_id              int   not null
         constraint StudiesMeetings_Studies
             references Studies,
-    date                    date not null,
-    type_id                 int  not null
+    date                    date  not null,
+    type_id                 int   not null
         constraint StudiesMeetings_MeetingType
             references MeetingType,
-    participants_limit      int  not null,
-    student_price           int  not null,
-    outer_participant_price int  not null
+    participants_limit      int   not null,
+    student_price           money not null,
+    outer_participant_price money not null
 )
 go
 ```
 ## Dane testowe
 
 ### Academics
-| academic_id |
-|-------------|
-| 2           |
-| 8           |
-| 10          |
-| 12          |
-| 21          |
+| academic\_id |
+| :--- |
+| 2 |
+| 8 |
+| 10 |
+| 12 |
+| 21 |
+| 27 |
+
 
 ### Apprenticeship
 
 
 ### Clients
-| client_id |
-|-----------|
-| 1         |
-| 3         |
-| 4         |
-| 5         |
-| 6         |
-| 7         |
-| 9         |
-| 11        |
-| 13        |
-| 15        |
+| client\_id |
+| :--- |
+| 1 |
+| 3 |
+| 4 |
+| 5 |
+| 6 |
+| 7 |
+| 9 |
+| 11 |
+| 13 |
+| 15 |
+| 23 |
+| 24 |
+| 26 |
+| 29 |
+| 30 |
+
 
 ### Courses
 | product_id | course_name                     | start_date | end_date   | participants_limit | advance_price | full_price |
@@ -782,10 +792,52 @@ go
 | 4                | meeting           |
 
 ### Studies
+| product\_id | name | participants\_limit | full\_price | advance\_price |
+| :--- | :--- | :--- | :--- | :--- |
+| 4 | Computer Science | 50 | 40.0000 | 20.0000 |
+| 8 | Astrology | 20 | 30.0000 | 12.0000 |
+| 12 | Cybersecurity | 30 | 35.0000 | 10.0000 |
+| 16 | Biomedic Engineering | 15 | 50.0000 | 25.0000 |
+| 19 | Economy | 100 | 25.0000 | 10.0000 |
+| 20 | Marketing | 200 | 10.0000 | 5.0000 |
 
 ### StudiesMeetings
+| meeting\_id | studies\_id | date | type\_id | participants\_limit | student\_price | outer\_participant\_price |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | 4 | 2023-10-06 | 1 | 50 | 0.0000 | 10.0000 |
+| 2 | 8 | 2023-10-20 | 2 | 30 | 0.0000 | 20.0000 |
+| 3 | 4 | 2023-10-30 | 1 | 60 | 0.0000 | 15.0000 |
+| 4 | 12 | 2023-11-07 | 3 | 50 | 5.0000 | 20.0000 |
+| 5 | 19 | 2023-11-13 | 2 | 100 | 0.0000 | 5.0000 |
+| 6 | 20 | 2023-12-28 | 2 | 200 | 0.0000 | 13.0000 |
+| 7 | 4 | 2024-01-03 | 3 | 100 | 0.0000 | 12.0000 |
+| 8 | 4 | 2024-03-04 | 2 | 65 | 6.0000 | 20.0000 |
+| 9 | 20 | 2024-03-05 | 2 | 200 | 7.0000 | 30.0000 |
+| 10 | 20 | 2024-03-12 | 2 | 200 | 2.0000 | 10.0000 |
+
+### Exams
+| exam\_id | participant\_id | date | points |
+| :--- | :--- | :--- | :--- |
+| 1 | 1 | 2023-10-12 | 60 |
+| 2 | 2 | 2024-12-06 | null |
+| 3 | 7 | 2024-08-14 | null |
+| 4 | 8 | 2023-11-23 | 97 |
+| 5 | 9 | 2024-05-23 | null |
 
 ### StudiesParticipants
+| participant\_id | client\_id | product\_id |
+| :--- | :--- | :--- |
+| 1 | 30 | 4 |
+| 2 | 23 | 12 |
+| 3 | 4 | 16 |
+| 4 | 23 | 20 |
+| 5 | 23 | 16 |
+| 6 | 24 | 16 |
+| 7 | 3 | 19 |
+| 8 | 4 | 20 |
+| 9 | 5 | 4 |
+| 10 | 29 | 4 |
+| 11 | 5 | 8 |
 
 ### User_type
 | user_type | type_name   |
