@@ -125,7 +125,7 @@ Funkcje managera i sekretarza + dodatkowo:
 
 ## 2. Schemat bazy danych
 
-![schemat](Systemy_Baz_Danych_2023_2024_–_projekt-2023-12-11_23-49.svg)
+![schemat](Systemy_Baz_Danych_2023_2024_–_projekt-2023-12-15_16-54.svg)
 
 ## 3. Implementacje tabel
 
