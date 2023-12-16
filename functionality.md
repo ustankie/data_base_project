@@ -1818,6 +1818,46 @@ END
 
 ### Kursy
 
+### ModulesPresence
+
+Sprawdzenie statusu swojej obecności na wybranych modułach
+```sql
+CREATE FUNCTION modulesPresence(@participant_id int, @module_id int)
+	RETURNS bit
+AS
+BEGIN
+	DECLARE @presence BIT
+	SET @presence = ISNULL((SELECT presence
+				FROM ModulesAttendance
+				WHERE participant_id=@participant_id AND
+				module_id=@module_id),0)
+	RETURN @presence
+END
+```
+
+#### CoursesPresence
+
+Sprawdzenie procentowej obecności na modułach w danym kursie
+
+```sql
+CREATE FUNCTION coursesPresence(@participant_id int, @product_id int)
+	RETURNS FLOAT
+AS
+BEGIN
+	DECLARE @presence int
+	SET @presence = ISNULL((SELECT COUNT(ma.presence)
+				FROM ModulesAttendance as ma
+					inner join Modules as m
+				on m.module_id=ma.module_id and m.product_id = @product_id
+				WHERE ma.participant_id=@participant_id and ma.presence=1),0)
+	DECLARE @modules_num int
+	SET @modules_num = ISNULL((SELECT COUNT(module_id)
+				FROM Modules
+				WHERE product_id = @product_id),0)
+	RETURN (@presence/@modules_num) *100
+END
+```
+
 #### CoursesFreeSlots
 
 Sprawdzenie ilości wolnych miejsc na kursach hybrydowych i stacjonarnych
