@@ -125,7 +125,7 @@ Funkcje managera i sekretarza + dodatkowo:
 
 ## 2. Schemat bazy danych
 
-![schemat](Systemy_Baz_Danych_2023_2024_–_projekt-2023-12-15_16-54.svg)
+![schemat](Systemy_Baz_Danych_2023_2024_–_projekt-2023-12-11_23-49.svg)
 
 ## 3. Implementacje tabel
 
@@ -301,32 +301,11 @@ create table ProductType
     product_type_name nvarchar(50) not null
 )
 go
-
-```
-
-#### BucketProducts
-
-Zawiera informację o produktach wrzuconych do koszyka przez klientów
-
-```sql
-create table BucketProducts
-(
-    bucket_entry_id int not null
-        constraint BucketProducts_pk
-            primary key,
-    client_id       int not null
-        constraint BucketItems_Clients
-            references Clients,
-    product_id      int not null
-        constraint BucketItems_ProductType
-            references Products
-)
-go
 ```
 
 #### Payments
 
-Spis wszystkich płatności (numer klienta, data płatności, wpłacona kwota, informacja czy kwota jest zaliczką, informacja czy płatność została anulowana)
+Spis wszystkich płatności (numer zamówienia, data płatności, wpłacona kwota)
 
 ```sql
 create table Payments
@@ -334,15 +313,10 @@ create table Payments
     payment_id   int   not null
         constraint Payments_pk
             primary key,
-    product_id   int   not null
-        constraint Payments_Products
-            references Products,
-    client_id    int   not null
-        constraint Clients_Payments
-            references Clients,
+    order_id     int   not null
+	constraint Payments_Orders
+            references Orders,
     payment_date date  not null,
-    is_advance   bit   not null,
-    cancelled    bit   not null,
     price        money not null
 )
 go
@@ -362,6 +336,50 @@ create table MeetingType
 )
 go
 ```
+
+### Orders
+
+Lista wszystkich zamówień (numer klienta, status płatności)
+
+```sql
+CREATE TABLE Orders (
+    order_id int  NOT NULL,
+    client_id int  NOT NULL,
+    payment_status int  NOT NULL,
+    	CONSTRAINT Orders_pk PRIMARY KEY  (order_id)
+)
+go
+```
+
+### OrdersDetails
+
+Lista wszystkich zamówień (numer klienta, status płatności)
+
+```sql
+create table Order_details (
+    order_id int  NOT NULL,
+    product_id int  NOT NULL,
+    is_advance bit  NOT NULL,
+    	CONSTRAINT Order_details_pk
+		PRIMARY KEY  (order_id,product_id)
+)
+go
+```
+### Statuses
+
+Rodzaje statusów zamówień ( nieopłacone, opłacone, anulowane )
+
+```sql
+CREATE TABLE Statuses (
+    status_id int  NOT NULL,
+    status_name varchar(20)  NOT NULL,
+    	CONSTRAINT Statuses_pk
+		PRIMARY KEY  (status_id)
+)
+go
+
+```
+
 
 ### 3.2. Webinars
 
@@ -1813,6 +1831,7 @@ BEGIN
 END
 
 ```
+
 
 ## Funkcje
 
