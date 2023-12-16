@@ -1813,3 +1813,29 @@ BEGIN
 END
 
 ```
+
+## Funkcje
+
+### Kursy
+
+#### CoursesFreeSlots
+
+Sprawdzenie ilości wolnych miejsc na kursach hybrydowych i stacjonarnych
+
+```sql
+CREATE FUNCTION coursesFreeSlots(@product_id int)
+	RETURNS INT
+AS
+BEGIN
+	DECLARE @slots INT
+	SET @slots = ISNULL((SELECT c.participants_limit
+						From Courses as c
+						Where c.product_id = @product_id), 0)
+	DECLARE @occupied INT
+	SET @occupied = ISNULL((SELECT SUM(cp.participant_id)
+					From CoursesParticipants as cp
+					WHERE cp.product_id = @product_id
+					GROUP BY cp.product_id),0)
+	RETURN @slots - @occupied
+END
+```
