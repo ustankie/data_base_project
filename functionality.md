@@ -1818,7 +1818,7 @@ END
 
 ### Kursy
 
-### ModulesPresence
+#### ModulesPresence
 
 Sprawdzenie statusu swojej obecności na wybranych modułach
 ```sql
