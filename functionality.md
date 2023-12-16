@@ -301,7 +301,7 @@ create table ProductType
     product_type_name nvarchar(50) not null
 )
 go
-
+```
 
 #### Payments
 
