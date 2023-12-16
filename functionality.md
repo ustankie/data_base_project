@@ -346,7 +346,7 @@ CREATE TABLE Orders (
     order_id int  NOT NULL,
     client_id int  NOT NULL,
     payment_status int  NOT NULL,
-    CONSTRAINT Orders_pk PRIMARY KEY  (order_id)
+    	CONSTRAINT Orders_pk PRIMARY KEY  (order_id)
 )
 go
 ```
@@ -360,7 +360,8 @@ create table Order_details (
     order_id int  NOT NULL,
     product_id int  NOT NULL,
     is_advance bit  NOT NULL,
-    	CONSTRAINT Order_details_pk PRIMARY KEY  (order_id,product_id)
+    	CONSTRAINT Order_details_pk
+		PRIMARY KEY  (order_id,product_id)
 )
 go
 ```
@@ -372,7 +373,8 @@ Rodzaje statusów zamówień ( nieopłacone, opłacone, anulowane )
 CREATE TABLE Statuses (
     status_id int  NOT NULL,
     status_name varchar(20)  NOT NULL,
-    CONSTRAINT Statuses_pk PRIMARY KEY  (status_id)
+    	CONSTRAINT Statuses_pk
+		PRIMARY KEY  (status_id)
 )
 go
 
