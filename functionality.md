@@ -927,6 +927,30 @@ go
 
 ### Sekretarza
 
+#### PastEvents
+
+Raport dotyczący frekwencji na danym wydarzeniu (moduł, spotkanie ze studiów) wraz z postawowymi informacjami
+
+```sql
+CREATE VIEW PastEventsAttendance
+AS
+SELECT pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, sm.type_id as type, COUNT(mp.presence) as attendance
+FROM StudiesMeetings as sm
+	inner join MeetingParticipants as mp on sm.meeting_id=mp.meeting_id and mp.presence=1
+	inner join Studies as s on s.product_id=sm.studies_id and sm.date <= GETDATE()
+	inner join Products as p on p.product_id=s.product_id
+	join ProductType as pt on pt.product_type_id=p.product_type_id
+GROUP BY pt.product_type_name, s.name, sm.meeting_id, sm.date, sm.type_id
+UNION
+SELECT pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, m.module_id as type, COUNT(ma.presence) as attendance
+FROM Modules as m
+	inner join ModulesAttendance as ma on m.module_id=ma.module_id and ma.presence=1
+	inner join Courses as c on c.product_id=m.product_id and m.end_date <= GETDATE()
+	inner join Products as p on p.product_id=c.product_id
+	join ProductType as pt on pt.product_type_id=p.product_type_id
+GROUP BY pt.product_type_name, c.course_name, m.module_id, m.start_date, m.module_id
+```
+
 #### EventsThisMonth
 
 Spis webinarów, modułów oraz spotkań ze studiów, które odbywają się w aktualnym miesiącu
