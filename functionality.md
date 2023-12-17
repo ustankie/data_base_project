@@ -301,32 +301,11 @@ create table ProductType
     product_type_name nvarchar(50) not null
 )
 go
-
-```
-
-#### BucketProducts
-
-Zawiera informację o produktach wrzuconych do koszyka przez klientów
-
-```sql
-create table BucketProducts
-(
-    bucket_entry_id int not null
-        constraint BucketProducts_pk
-            primary key,
-    client_id       int not null
-        constraint BucketItems_Clients
-            references Clients,
-    product_id      int not null
-        constraint BucketItems_ProductType
-            references Products
-)
-go
 ```
 
 #### Payments
 
-Spis wszystkich płatności (numer klienta, data płatności, wpłacona kwota, informacja czy kwota jest zaliczką, informacja czy płatność została anulowana)
+Spis wszystkich płatności (numer zamówienia, data płatności, wpłacona kwota)
 
 ```sql
 create table Payments
@@ -334,15 +313,10 @@ create table Payments
     payment_id   int   not null
         constraint Payments_pk
             primary key,
-    product_id   int   not null
-        constraint Payments_Products
-            references Products,
-    client_id    int   not null
-        constraint Clients_Payments
-            references Clients,
+    order_id     int   not null
+	constraint Payments_Orders
+            references Orders,
     payment_date date  not null,
-    is_advance   bit   not null,
-    cancelled    bit   not null,
     price        money not null
 )
 go
@@ -362,6 +336,50 @@ create table MeetingType
 )
 go
 ```
+
+### Orders
+
+Lista wszystkich zamówień (numer klienta, status płatności)
+
+```sql
+CREATE TABLE Orders (
+    order_id int  NOT NULL,
+    client_id int  NOT NULL,
+    payment_status int  NOT NULL,
+    	CONSTRAINT Orders_pk PRIMARY KEY  (order_id)
+)
+go
+```
+
+### OrdersDetails
+
+Lista wszystkich zamówień (numer klienta, status płatności)
+
+```sql
+create table Order_details (
+    order_id int  NOT NULL,
+    product_id int  NOT NULL,
+    is_advance bit  NOT NULL,
+    	CONSTRAINT Order_details_pk
+		PRIMARY KEY  (order_id,product_id)
+)
+go
+```
+### Statuses
+
+Rodzaje statusów zamówień ( nieopłacone, opłacone, częsciowo opłacone (z jakiegos produktu tylko zaliczka), anulowane )
+
+```sql
+CREATE TABLE Statuses (
+    status_id int  NOT NULL,
+    status_name varchar(20)  NOT NULL,
+    	CONSTRAINT Statuses_pk
+		PRIMARY KEY  (status_id)
+)
+go
+
+```
+
 
 ### 3.2. Webinars
 
@@ -1907,4 +1925,106 @@ BEGIN
 	END CATCH
 END
 
+```
+
+## Funkcje
+
+### Kursy
+
+#### CourseInfo
+
+Wypisanie podstawowych informacji o kursie takich jak: nazwa, cena, zaliczka, data rozpoczecia, data zakonczenia oraz język główny i jezyk na który kurs jest tłumaczony.
+
+```sql
+CREATE FUNCTION courseInfo(@product_id int)
+	RETURNS table
+		AS
+		RETURN Select c.course_name as course_name,
+		c.full_price as price,
+		c.advance_price as advance_price,
+		c.start_date as start_date,
+		c.end_date as end_date,
+		p.language as orginal_language,
+		l.language_name as translated_to
+		FROM Products as p
+		join Courses as c on c.product_id=p.product_id
+		left outer join Languages as l on l.language_id=p.translated_to
+		WHERE p.product_id=@product_id
+```
+
+#### ModulesPresence
+
+Sprawdzenie statusu swojej obecności na wybranych modułach
+```sql
+CREATE FUNCTION modulesPresence(@participant_id int, @module_id int)
+	RETURNS bit
+AS
+BEGIN
+	DECLARE @presence BIT
+	SET @presence = ISNULL((SELECT presence
+				FROM ModulesAttendance
+				WHERE participant_id=@participant_id AND
+				module_id=@module_id),0)
+	RETURN @presence
+END
+```
+
+#### CoursesPresence
+
+Sprawdzenie procentowej obecności na modułach w danym kursie
+
+```sql
+CREATE FUNCTION coursesPresence(@participant_id int, @product_id int)
+	RETURNS FLOAT
+AS
+BEGIN
+	DECLARE @presence int
+	SET @presence = ISNULL((SELECT COUNT(ma.presence)
+				FROM ModulesAttendance as ma
+					inner join Modules as m
+				on m.module_id=ma.module_id and m.product_id = @product_id
+				WHERE ma.participant_id=@participant_id and ma.presence=1),0)
+	DECLARE @modules_num int
+	SET @modules_num = ISNULL((SELECT COUNT(module_id)
+				FROM Modules
+				WHERE product_id = @product_id),0)
+	RETURN (@presence/@modules_num) *100
+END
+```
+
+#### CoursesFreeSlots
+
+Sprawdzenie ilości wolnych miejsc na kursach hybrydowych i stacjonarnych
+
+```sql
+CREATE FUNCTION coursesFreeSlots(@product_id int)
+	RETURNS INT
+AS
+BEGIN
+	DECLARE @slots INT
+	SET @slots = ISNULL((SELECT c.participants_limit
+						From Courses as c
+						Where c.product_id = @product_id), 0)
+	DECLARE @occupied INT
+	SET @occupied = ISNULL((SELECT SUM(cp.participant_id)
+					From CoursesParticipants as cp
+					WHERE cp.product_id = @product_id
+					GROUP BY cp.product_id),0)
+	RETURN @slots - @occupied
+END
+```
+
+### ClientsCourses
+
+Sprawdzenie na jakie kursy jest zapisany dany klient oraz status płatności tego kursu
+
+```sql
+CREATE FUNCTION clientCourses(@client_id int)
+	RETURNS table
+		AS
+		RETURN Select c.course_name, s.status_name
+		FROM Orders as o inner join Order_details as od on od.order_id=o.order_id
+		inner join Courses as c on c.product_id=od.product_id
+		inner join Statuses as s on s.status_id=o.payment_status
+		WHERE o.client_id=@client_id
 ```
