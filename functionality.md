@@ -925,7 +925,7 @@ go
 
 ## Widoki
 
-### Sekretarza
+### Dla Sekretarza
 
 #### PastEvents
 
@@ -988,6 +988,18 @@ FROM Exams as e
 	inner join ExamsTaken as et on et.exam_id=e.exam_id
 GROUP BY e.studies_id, e.exam_id, e.max_points
 ```
+#### StudentsApprenticeships
+
+Lista studentów wraz z iloscią odbytych praktyk
+
+```sql
+CREATE VIEW StudentsApprenticeship
+AS
+SELECT a.participant_id, COUNT(a.date) as apprenticeships_taken
+FROM Apprenticeship as a
+GROUP BY a.participant_id
+```
+
 ## Procedury
 
 ### AddWebinar
