@@ -922,6 +922,35 @@ go
 | 9          | Robotics for children             | 2023-10-11  | 60    |
 | 13         | Advanced constructions in English | 2023-12-10  | NULL  |
 
+
+## Widoki
+
+### Sekretarza
+
+#### EventsThisMonth
+
+Spis webinarów, modułów oraz spotkań ze studiów, które odbywają się w aktualnym miesiącu
+
+```sql
+CREATE VIEW EventsThisMonth
+AS
+SELECT pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, sm.type_id as type
+FROM StudiesMeetings as sm
+	inner join Studies as s on s.product_id=sm.studies_id and YEAR(sm.date) = YEAR(GETDATE()) and MONTH(sm.date) = MONTH(GETDATE())
+	inner join Products as p on p.product_id=s.product_id
+	join ProductType as pt on pt.product_type_id=p.product_type_id
+UNION
+SELECT pt.product_type_name as category, w.webinar_name as product_name, NULL as id, w.posted_date as date, 'Zdalnie' as type
+FROM Webinars as w
+ 	inner join Products as p on p.product_id=w.product_id and YEAR(w.posted_date) = YEAR(GETDATE()) and MONTH(w.posted_date) = MONTH(GETDATE())
+	join ProductType as pt on pt.product_type_id=p.product_type_id
+UNION
+SELECT pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, m.module_type as type
+FROM Modules as m
+	inner join Courses as c on c.product_id=m.product_id and YEAR(m.start_date) = YEAR(GETDATE()) and MONTH(m.start_date) = MONTH(GETDATE())
+	inner join Products as p on p.product_id=c.product_id
+	join ProductType as pt on pt.product_type_id=p.product_type_id
+```
 ## Procedury
 
 ### AddWebinar
