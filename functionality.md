@@ -911,7 +911,7 @@ go
 Dodaje webinar o podanej nazwie, id nauczyciela, nazwie języka oraz opcjonalnie danych o tłumaczu i języku, na który jest tłumaczone dane szkolenie do tabeli webinars oraz products
 
 ```sql
-DECLARE PROCEDURE uspAddWebinar
+CREATE PROCEDURE uspAddWebinar
  @language_name nvarchar(50),
  @academic_id int,
  @interpreter_id int=null,
@@ -964,7 +964,7 @@ BEGIN
   ) AND @interpreter_id is not null
   BEGIN
    ;
-   THROW 52000, N'Nie ma takiego nauczyciela!',1 
+   THROW 52000, N'Nie ma takiego tłumacza!',1 
   END
 
   DECLARE @type_id INT
@@ -1116,7 +1116,7 @@ BEGIN
   ) AND @interpreter_id is not null
   BEGIN
    ;
-   THROW 52000, N'Nie ma takiego nauczyciela!',1 
+   THROW 52000, N'Nie ma takiego tłumacza!',1 
   END
 
   DECLARE @type_id INT
@@ -1160,14 +1160,6 @@ END
 Ustawia cenę zaliczki i/lub pełną cenę kursu
 
 ```sql
-USE [u_stankiew]
-GO
-/****** Object:  StoredProcedure [dbo].[uspSetWebinarPrice]    Script Date: 14.12.2023 14:05:24 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 CREATE PROCEDURE [dbo].[uspSetCoursePrice]
 	@course_name nvarchar(50),
 	@advance_price money=null,
@@ -1561,7 +1553,7 @@ BEGIN
 		END
 		
 
-		IF @type_name='webinars='
+		IF @type_name='webinars'
 		begin
 			INSERT INTO WebinarParticipants(product_id,client_id)
 			values(@product_id,@client_id)
@@ -1808,6 +1800,109 @@ BEGIN
 	END TRY
 	BEGIN CATCH
 		DECLARE @msg nvarchar(2048)=N'Błąd wpisywania obecności: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+```
+
+### AddExamResult
+
+Dodaje wynik egzaminu po podaniu przez użytkownika id egzaminu, id uczestnika studiów i punktów przez niego zdobytych
+
+```sql
+CREATE PROCEDURE [dbo].[uspAddExamResult]
+	@exam_id int,
+	@participant_id int,
+	@points int
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+		
+		IF NOT EXISTS(
+			SELECT *
+			FROM Exams
+			where @exam_id=exam_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki egzamin nie istnieje',1 
+		END
+
+		IF NOT EXISTS(
+			SELECT *
+			FROM StudiesParticipants
+			where @participant_id=participant_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki uczestnik studiów nie istnieje',1 
+		END
+
+		DECLARE @max_points INT;
+		SELECT @max_points = max_points
+		FROM Exams
+		WHERE exam_id=@exam_id
+
+		IF @max_points<@points
+		Begin 
+			;
+			THROW 52000, N'Liczba punktów przekracza wartość maksymalną',1 
+		END
+
+		INSERT INTO ExamsTaken(exam_id,participant_id,points)
+		values(@exam_id,@participant_id,@points)
+
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd wpisywania wyniku egzaminu: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+```
+
+### AddApprenticeship
+
+Dla podanego uczestnika studiów dodaje datę odbycia przez niego praktyk do tabeli Apprenticeship
+
+```sql
+CREATE PROCEDURE [dbo].[uspAddApprenticeship]
+	@date date,
+	@participant_id int
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+		
+		IF NOT EXISTS(
+			SELECT *
+			FROM StudiesParticipants
+			where @participant_id=participant_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki uczestnik studiów nie istnieje',1 
+		END
+
+
+		IF GETDATE()<@date
+		Begin 
+			;
+			THROW 52000, N'Wprowadzenie praktyk o dacie przyszłej niemożliwe',1 
+		END
+
+		INSERT INTO Apprenticeship(participant_id,date)
+		values(@participant_id,@date)
+
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd dodania praktyk: ' + ERROR_MESSAGE();
 		THROW 52000, @msg, 1;
 	END CATCH
 END
