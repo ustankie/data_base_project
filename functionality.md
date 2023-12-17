@@ -975,6 +975,19 @@ FROM Modules as m
 	inner join Products as p on p.product_id=c.product_id
 	join ProductType as pt on pt.product_type_id=p.product_type_id
 ```
+
+### Exams Stats
+
+Lista egzaminów wraz z srednia ilościa punktów uzyskanych przez studentów
+
+```sql
+CREATE VIEW ExamsStats
+AS
+SELECT e.studies_id as studies, e.exam_id as exam, e.max_points as max_points, AVG(et.points) as average_points
+FROM Exams as e
+	inner join ExamsTaken as et on et.exam_id=e.exam_id
+GROUP BY e.studies_id, e.exam_id, e.max_points
+```
 ## Procedury
 
 ### AddWebinar
