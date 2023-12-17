@@ -922,6 +922,84 @@ go
 | 9          | Robotics for children             | 2023-10-11  | 60    |
 | 13         | Advanced constructions in English | 2023-12-10  | NULL  |
 
+
+## Widoki
+
+### Dla Sekretarza
+
+#### PastEvents
+
+Raport dotyczący frekwencji na danym wydarzeniu (moduł, spotkanie ze studiów) wraz z postawowymi informacjami
+
+```sql
+CREATE VIEW PastEventsAttendance
+AS
+SELECT pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, sm.type_id as type, COUNT(mp.presence) as attendance
+FROM StudiesMeetings as sm
+	inner join MeetingParticipants as mp on sm.meeting_id=mp.meeting_id and mp.presence=1
+	inner join Studies as s on s.product_id=sm.studies_id and sm.date <= GETDATE()
+	inner join Products as p on p.product_id=s.product_id
+	join ProductType as pt on pt.product_type_id=p.product_type_id
+GROUP BY pt.product_type_name, s.name, sm.meeting_id, sm.date, sm.type_id
+UNION
+SELECT pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, m.module_id as type, COUNT(ma.presence) as attendance
+FROM Modules as m
+	inner join ModulesAttendance as ma on m.module_id=ma.module_id and ma.presence=1
+	inner join Courses as c on c.product_id=m.product_id and m.end_date <= GETDATE()
+	inner join Products as p on p.product_id=c.product_id
+	join ProductType as pt on pt.product_type_id=p.product_type_id
+GROUP BY pt.product_type_name, c.course_name, m.module_id, m.start_date, m.module_id
+```
+
+#### EventsThisMonth
+
+Spis webinarów, modułów oraz spotkań ze studiów, które odbywają się w aktualnym miesiącu
+
+```sql
+CREATE VIEW EventsThisMonth
+AS
+SELECT pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, sm.type_id as type
+FROM StudiesMeetings as sm
+	inner join Studies as s on s.product_id=sm.studies_id and YEAR(sm.date) = YEAR(GETDATE()) and MONTH(sm.date) = MONTH(GETDATE())
+	inner join Products as p on p.product_id=s.product_id
+	join ProductType as pt on pt.product_type_id=p.product_type_id
+UNION
+SELECT pt.product_type_name as category, w.webinar_name as product_name, NULL as id, w.posted_date as date, 'Zdalnie' as type
+FROM Webinars as w
+ 	inner join Products as p on p.product_id=w.product_id and YEAR(w.posted_date) = YEAR(GETDATE()) and MONTH(w.posted_date) = MONTH(GETDATE())
+	join ProductType as pt on pt.product_type_id=p.product_type_id
+UNION
+SELECT pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, m.module_type as type
+FROM Modules as m
+	inner join Courses as c on c.product_id=m.product_id and YEAR(m.start_date) = YEAR(GETDATE()) and MONTH(m.start_date) = MONTH(GETDATE())
+	inner join Products as p on p.product_id=c.product_id
+	join ProductType as pt on pt.product_type_id=p.product_type_id
+```
+
+### Exams Stats
+
+Lista egzaminów wraz z srednia ilościa punktów uzyskanych przez studentów
+
+```sql
+CREATE VIEW ExamsStats
+AS
+SELECT e.studies_id as studies, e.exam_id as exam, e.max_points as max_points, AVG(et.points) as average_points
+FROM Exams as e
+	inner join ExamsTaken as et on et.exam_id=e.exam_id
+GROUP BY e.studies_id, e.exam_id, e.max_points
+```
+#### StudentsApprenticeships
+
+Lista studentów wraz z iloscią odbytych praktyk
+
+```sql
+CREATE VIEW StudentsApprenticeship
+AS
+SELECT a.participant_id, COUNT(a.date) as apprenticeships_taken
+FROM Apprenticeship as a
+GROUP BY a.participant_id
+```
+
 ## Procedury
 
 ### AddWebinar
