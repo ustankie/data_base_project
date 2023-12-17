@@ -1880,7 +1880,6 @@ BEGIN
 		THROW 52000, @msg, 1;
 	END CATCH
 END
-
 ```
 
 ### AddApprenticeship
@@ -1924,6 +1923,541 @@ BEGIN
 		THROW 52000, @msg, 1;
 	END CATCH
 END
+
+```
+
+### ChangeMeetingDate
+
+Zmienia datę spotkania
+
+```sql
+CREATE PROCEDURE [dbo].[uspChangeMeetingDate]
+	@meeting_id int,
+	@date date
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+		IF NOT EXISTS(
+			SELECT *
+			FROM StudiesMeetings
+			where @meeting_id=meeting_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki meeting nie istnieje',1 
+		END
+		
+		DECLARE @former_date DATE;
+		SELECT @former_date=date
+		FROM StudiesMeetings
+		WHERE meeting_id=@meeting_id
+
+		IF @former_date<GETDATE()
+		Begin
+			;
+			THROW 52000, N'Spotkanie się już odbyło - nie można zmienić jego daty!',1 
+		END	
+		
+		IF @date<GETDATE()
+		Begin
+			;
+			THROW 52000, N'Data spotkania może być zmieniona tylko na przyszłą',1 
+		END
+
+		
+		UPDATE StudiesMeetings
+		SET date=@date
+		where meeting_id=@meeting_id
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd zmiany daty spotkania: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+```
+
+### DeleteProduct
+
+Usuwa produkt o podanym id z bazy
+
+```sql
+CREATE PROCEDURE [dbo].[uspDeleteProduct]
+	@product_id int
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+		IF NOT EXISTS(
+			SELECT *
+			FROM Products
+			where @product_id=product_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki produkt nie istnieje',1 
+		END
+		
+		DELETE FROM Products Where @product_id=product_id
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd usuwania produktu: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+```
+
+### Pay
+
+Dla podanego order_id sumuje ceny produktów wyszczególnionych w order_details i dodaje do płatność do tabeli Payments oraz uczestników do tabel odpowiadających opłaconym szkoleniom
+
+```sql
+CREATE PROCEDURE [dbo].[uspPay]
+	@order_id int
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+
+		IF NOT EXISTS(
+			SELECT *
+			FROM Orders
+			where @order_id=order_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Takie zamówienie nie istnieje',1 
+		END
+
+		Declare @total_price money;
+		SET @total_price=0;
+
+		DECLARE @client_id INT
+		SELECT @client_id=client_id
+		from orders
+		where order_id=@order_id
+
+		DECLARE @status INT;
+		SELECT @status=status_id
+		from statuses s
+		join orders o
+		on o.payment_status=s.status_id
+		where order_id=@order_id
+
+		DECLARE @initial_status INT;
+		SET @initial_status=@status
+
+		SELECT @status=status_id
+		from statuses 
+		where status_name='paid'
+
+		print(@status)
+
+		DECLARE curOrder cursor for
+		select product_id
+		from Order_details
+		where order_id=@order_id
+
+
+		DECLARE @product_id INT;
+
+		Open curOrder
+
+		FETCH NEXT FROM curOrder INTO @product_id
+		WHILE @@FETCH_STATUS = 0
+		BEGIN	
+			DECLARE @is_advance bit
+			SELECT @is_advance=is_advance
+			from Order_details
+			where @product_id=product_id and @order_id=order_id
+
+
+			DECLARE @product_type nvarchar(50)
+			SELECT @product_type=product_type_name
+			from Products p
+			join ProductType pt on pt.product_type_id=p.product_type_id
+			where product_id=@product_id
+
+			DECLARE @price money
+
+			IF @product_type='webinar'
+			BEGIN
+				select @price=price
+				from webinars
+				where @product_id=product_id
+				
+				if not exists(
+				select *
+				from WebinarParticipants
+				where @client_id=client_id
+				)
+				begin
+					Insert into WebinarParticipants(product_id,client_id)
+					values (@product_id,@client_id)
+				end
+			END
+
+			else IF @product_type='course'
+			BEGIN
+				IF @is_advance=1
+				begin
+					SELECT @status=status_id
+					from statuses 
+					where status_name='partially_paid'
+
+					select @price=advance_price
+					from courses
+					where @product_id=product_id
+				end
+				ELSE
+				begin
+					select @price=full_price
+					from courses
+					where @product_id=product_id
+				end
+				if not exists(
+				select *
+				from CoursesParticipants
+				where @client_id=client_id
+				)
+				begin
+
+					Insert into CoursesParticipants(product_id,client_id)
+					values (@product_id,@client_id)
+				end
+			END
+
+			else IF @product_type='studies'
+			BEGIN
+				IF @is_advance=1
+				begin
+					SELECT @status=status_id
+					from statuses 
+					where status_name='partially_paid'
+
+
+					select @price=advance_price
+					from Studies
+					where @product_id=product_id
+				end
+				ELSE
+				begin
+					select @price=full_price
+					from studies
+					where @product_id=product_id
+				end
+				if not exists(
+				select *
+				from StudiesParticipants
+				where @client_id=client_id
+				)
+				begin
+					Insert into StudiesParticipants(product_id,client_id)
+					values (@product_id,@client_id)
+				end
+			END
+			else if @product_type='meeting'
+			begin
+				
+				if exists(
+					Select * 
+					from StudiesParticipants
+					where @client_id=client_id
+				)
+				begin
+					select @price=student_price
+					from StudiesMeetings
+					where @product_id=meeting_id
+
+					DECLARE @participant_id int
+					select @participant_id=participant_id
+					from StudiesParticipants
+					where client_id=@client_id
+					if not exists(
+					select *
+					from MeetingParticipants
+					where @participant_id=participant_id
+					)
+					begin
+						Insert into MeetingParticipants(meeting_id,participant_id,presence)
+						values (@product_id,@participant_id,0)
+					end
+				end
+				else
+				begin
+					select @price=outer_participant_price
+					from StudiesMeetings
+					where @product_id=meeting_id
+
+
+					if not exists(
+					select *
+					from OuterMeetingParticipants
+					where @client_id=client_id
+					)
+					begin
+						Insert into OuterMeetingParticipants(meeting_id,client_id,presence)
+						values (@product_id,@client_id,0)
+					end
+				end
+			end
+
+			SET @total_price = @total_price +@price;
+
+			FETCH NEXT FROM curOrder INTO @product_id;
+		
+
+		END
+
+		close curOrder
+		DEALLOCATE curOrder;
+
+
+		IF @initial_status=(
+		select status_id
+		from Statuses
+		where status_name='partially_paid'
+		)
+		Begin
+			declare @former_price money;
+			set @former_price=(select sum(price)
+			from payments
+			where order_id=@order_id
+			group by order_id)
+			print(@total_price)
+
+			set @total_price=@total_price-@former_price
+		end
+
+		INSERT INTO Payments(order_id,payment_date, price)
+		Values (@order_id,GETDATE(),@total_price);
+
+		UPDATE Orders
+		SET payment_status=@status
+		where order_id=@order_id
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd płatności: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+```
+### AddOrder
+
+Tworzy zamówienie dla klienta o podanym id
+
+```sql
+CREATE PROCEDURE [dbo].[uspAddOrder]
+	@client_id int
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+		
+		IF NOT EXISTS(
+			SELECT *
+			FROM Clients
+			where @client_id=client_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki klient nie istnieje',1 
+		END
+
+
+		INSERT INTO Orders(client_id)
+		values(@client_id)
+
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd tworzenia nowego zamówienia: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+
+```
+
+### AddProductToOrder
+
+Dodaje produkt do podanego zamówienia oraz informację, czy jest to zaliczka czy nie
+
+```sql
+CREATE PROCEDURE [dbo].[uspAddProductToOrder]
+	@order_id int,
+	@product_id int,
+	@is_advance bit
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+		
+		IF NOT EXISTS(
+			SELECT *
+			FROM orders
+			where @order_id=order_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Takie zamówienie nie istnieje',1 
+		END
+
+		IF NOT EXISTS(
+			SELECT *
+			FROM products
+			where @product_id=product_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki produkt nie istnieje',1 
+		END
+		
+		declare @status nvarchar(50)
+		select @status=status_name
+		from Statuses s
+		join orders o
+		on o.payment_status=s.status_id
+		where order_id=@order_id
+
+		IF @status!='not_paid'
+		BEGIN
+			;
+			THROW 52000, N'Nie można dodać produktu do zamówienia, którego płatność zaczęła być realizowana',1 
+		END
+
+
+		INSERT INTO Order_details(order_id,product_id,is_advance)
+		values(@order_id,@product_id,@is_advance)
+
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd dodawania produktu zamówienia: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+```
+
+### ChangeToFullPrice
+
+Zmienia pole is_advance tabeli Order_details na false - oznacza to, że klient chce zapłacić pełną cenę po uprzednim zapłaceniu zaliczki
+
+```sql
+CREATE PROCEDURE [dbo].[uspChangeToFullPrice]
+	@order_id int,
+	@product_id int
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+		
+		IF NOT EXISTS(
+			SELECT *
+			FROM orders
+			where @order_id=order_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Takie zamówienie nie istnieje',1 
+		END
+
+		IF NOT EXISTS(
+			SELECT *
+			FROM products
+			where @product_id=product_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki produkt nie istnieje',1 
+		END
+
+
+		Update Order_details
+		set is_advance=0
+		where order_id=@order_id and product_id=@product_id
+
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd zmiany zaliczki na pełną cenę: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+
+```
+
+### DeleteProductFromOrder
+
+```sql
+
+CREATE PROCEDURE [dbo].[uspDeleteProductFromOrder]
+	@order_id int,
+	@product_id int
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+		
+		IF NOT EXISTS(
+			SELECT *
+			FROM orders
+			where @order_id=order_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Takie zamówienie nie istnieje',1 
+		END
+
+		IF NOT EXISTS(
+			SELECT *
+			FROM Order_details
+			where @product_id=product_id and @order_id=order_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki produkt nie istnieje w podanym zamówieniu',1 
+		END
+
+		declare @status nvarchar(50)
+		select @status=status_name
+		from Statuses s
+		join orders o
+		on o.payment_status=s.status_id
+		where order_id=@order_id
+
+		IF @status!='not_paid'
+		BEGIN
+			;
+			THROW 52000, N'Nie można usunąć produktu z zamówienia, którego płatność zaczęła być realizowana',1 
+		END
+		
+		DELETE FROM Order_details
+		where product_id=@product_id and order_id=@order_id
+
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd usunięcia produktu z zamówienia: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
 
 ```
 
