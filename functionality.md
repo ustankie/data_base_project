@@ -958,22 +958,25 @@ Spis webinarów, modułów oraz spotkań ze studiów, które odbywają się w ak
 ```sql
 CREATE VIEW EventsThisMonth
 AS
-SELECT pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, sm.type_id as type
+SELECT pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, mt.type_name  as type
 FROM StudiesMeetings as sm
 	inner join Studies as s on s.product_id=sm.studies_id and YEAR(sm.date) = YEAR(GETDATE()) and MONTH(sm.date) = MONTH(GETDATE())
 	inner join Products as p on p.product_id=s.product_id
+	join MeetingType as mt on mt.type_id = sm.type_id
 	join ProductType as pt on pt.product_type_id=p.product_type_id
 UNION
-SELECT pt.product_type_name as category, w.webinar_name as product_name, NULL as id, w.posted_date as date, 'Zdalnie' as type
+SELECT pt.product_type_name as category, w.webinar_name as product_name, w.product_id, w.posted_date as date, 'on-line' as type
 FROM Webinars as w
  	inner join Products as p on p.product_id=w.product_id and YEAR(w.posted_date) = YEAR(GETDATE()) and MONTH(w.posted_date) = MONTH(GETDATE())
 	join ProductType as pt on pt.product_type_id=p.product_type_id
 UNION
-SELECT pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, m.module_type as type
+SELECT pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, mt.type_name as type
 FROM Modules as m
 	inner join Courses as c on c.product_id=m.product_id and YEAR(m.start_date) = YEAR(GETDATE()) and MONTH(m.start_date) = MONTH(GETDATE())
 	inner join Products as p on p.product_id=c.product_id
+	join MeetingType as mt on mt.type_id = m.module_type
 	join ProductType as pt on pt.product_type_id=p.product_type_id
+GO
 ```
 
 ### Exams Stats
