@@ -125,7 +125,7 @@ Funkcje managera i sekretarza + dodatkowo:
 
 ## 2. Schemat bazy danych
 
-![schemat](Systemy_Baz_Danych_2023_2024_–_projekt-2023-12-15_16-54.svg)
+![schemat](Systemy_Baz_Danych_2023_2024_–_projekt-2023-12-18_20-39.svg)
 
 ## 3. Implementacje tabel
 
@@ -673,13 +673,14 @@ create table ExamsTaken
     participant_id int not null
         constraint ExamsTaken_StudiesParticipants
             references StudiesParticipants,
-    points         int,
+    points         int not null,
     constraint ExamsTaken_pk
         primary key (participant_id, exam_id),
     constraint check_points
         check ([points] >= 0 AND [points] <= [dbo].[checkExamMaxPoints]([exam_id]))
 )
 go
+
 ```
 
 ##
@@ -787,497 +788,6 @@ create table OuterMeetingParticipants
 )
 go
 ```
-## Dane testowe
-
-### Academics
-| academic\_id |
-| :--- |
-| 2 |
-| 8 |
-| 10 |
-| 12 |
-| 21 |
-| 27 |
-
-
-### Apprenticeship
-| participant_id | date       | presence_percentage |
-|----------------|------------|---------------------|
-| 1              | 2023-11-15 | 100                 |
-| 4              | 2023-08-23 | 100                 |
-| 4              | 2023-12-17 | 100                 |
-
-### Clients
-| client\_id |
-| :--- |
-| 1 |
-| 3 |
-| 4 |
-| 5 |
-| 6 |
-| 7 |
-| 9 |
-| 11 |
-| 13 |
-| 15 |
-| 23 |
-| 24 |
-| 26 |
-| 29 |
-| 30 |
-
-
-### Courses
-| product_id | course_name                     | start_date | end_date   | participants_limit | advance_price | full_price |
-|------------|---------------------------------|------------|------------|--------------------|---------------|------------|
-| 2          | SQL for begineers               | 2022-12-12 | 2023-02-20 | 15                 | 500           | 2500       |
-| 6          | SQL for intermediate            | 2024-03-20 | 2024-06-30 | 10                 | 1000          | 3000       |
-| 10         | Python algoritms and structures | 2023-10-10 | 2024-01-20 | 25                 | 1500          | 4000       |
-| 14         | UNIX comends                    | 2024-01-05 | 2024-01-31 | 20                 | 250           | 1000       |
-
-### CoursesParticipants
-| participant_id | client_id | product_id |
-|----------------|-----------|------------|
-| 1              | 1         | 2          |
-| 2              | 1         | 6          |
-| 3              | 4         | 2          |
-| 4              | 4         | 6          |
-| 5              | 7         | 10         |
-| 6              | 7         | 14         |
-| 7              | 1         | 10         |
-| 8              | 1         | 14         |
-| 9              | 11        | 10         |
-| 10             | 15        | 10         |
-| 11             | 5         | 10         |
-| 12             | 13        | 10         |
-| 13             | 9         | 10         |
-| 14             | 3         | 10         |
-
-### Exams
-| exam_id | studies_id | date       | max_points |
-|---------|------------|------------|------------|
-| 1       | 4          | 2023-10-12 | 60         |
-| 2       | 8          | 2024-12-06 | 100        |
-| 3       | 12         | 2024-08-14 | 20         |
-| 4       | 16         | 2023-11-23 | 97         |
-| 5       | 19         | 2024-05-23 | 150        |
-| 6       | 4          | 2023-12-16 | 100        |
-| 7       | 20         | 2023-10-04 | 80         |
-| 8       | 20         | 2023-12-08 | 60         |
-
-### ExamsTaken
-| exam_id | participant_id | points |
-|---------|----------------|--------|
-| 1       | 1              | 55     |
-| 6       | 1              | 92     |
-| 7       | 4              | 66     |
-| 8       | 4              | 53     |
-| 4       | 5              | 82     |
-| 4       | 6              | 95     |
-| 1       | 9              | 40     |
-| 1       | 10             | 49     |
-
-### Interpreted_language
-| interpreter_id | translate_from | translate_to |
-|----------------|----------------|--------------|
-| 14             | 2              | 1            |
-| 14             | 2              | 3            |
-| 14             | 3              | 1            |
-| 22             | 4              | 1            |
-
-### Interpreters
-| interpreter_id |
-|----------------|
-| 14             |
-| 22             |
-
-### Languages
-| language_id | language_name |
-|-------------|---------------|
-| 1           | Polish        |
-| 2           | German        |
-| 3           | English       |
-| 4           | Italian       |
-
-### Studies
-| product_id | name                    | participants_limit | full_price | advance_price |
-|------------|-------------------------|--------------------|------------|---------------|
-| 4          | Computer Science        | 50                 | 40,00      | 20,00         |
-| 8          | Astrophysics            | 20                 | 30,00      | 12,00         |
-| 12         | Cybersecurity           | 30                 | 35,00      | 10,00         |
-| 16         | Biomedic Engineering    | 15                 | 50,00      | 25,00         |
-| 19         | Economy                 | 100                | 25,00      | 10,00         |
-| 20         | Marketing               | 200                | 10,00      | 5,00          |
-| 23         | Geschichte und Okonomie | 23                 | 2000,00    | 100,00        |
-
-### StudiesParticipants
-| participant_id | client_id | product_id |
-|----------------|-----------|------------|
-| 1              | 30        | 4          |
-| 2              | 23        | 12         |
-| 3              | 4         | 16         |
-| 4              | 23        | 20         |
-| 5              | 23        | 16         |
-| 6              | 24        | 16         |
-| 7              | 3         | 19         |
-| 8              | 4         | 20         |
-| 9              | 5         | 4          |
-| 10             | 29        | 4          |
-| 11             | 5         | 8          |
-
-### StudiesMeetings
-| meeting_id | studies_id | date       | type_id | participants_limit | student_price | outer_participant_price | meeting_topic                        |
-|------------|------------|------------|---------|--------------------|---------------|-------------------------|--------------------------------------|
-| 3          | 4          | 2023-10-30 | 1       | 60                 | 0,00          | 15,00                   | "Programming Basics"                 |
-| 6          | 8          | 2023-10-20 | 2       | 30                 | 0,00          | 20,00                   | "Black holes explained"              |
-| 7          | 4          | 2023-12-25 | 1       | 50                 | 0,00          | 10,00                   | "Operating Systems"                  |
-| 11         | 4          | 2023-12-15 | 2       | 65                 | 0,00          | 5,00                    | "Network Architecture"               |
-| 15         | 4          | 2023-11-22 | 1       | 100                | 60,00         | 100,00                  | "Algorithms Part 1"                  |
-| 24         | 4          | 2023-12-23 | 1       | 50                 | 60,00         | 200,00                  | "Object Oriented Programing"         |
-| 26         | 4          | 2023-12-05 | 1       | 150                | 60,00         | 15,00                   | "Algorithms Part 2"                  |
-| 27         | 8          | 2023-10-18 | 2       | 35                 | 60,00         | 20,00                   | "Introduction to Astrophysiscs "     |
-| 28         | 8          | 2023-10-25 | 3       | 40                 | 60,00         | 100,00                  | "Modern cosmology theories"          |
-| 29         | 12         | 2023-12-24 | 3       | 50                 | 5,00          | 20,00                   | "Introduction to cybersecurity"      |
-| 30         | 19         | 2023-11-13 | 2       | 100                | 0,00          | 5,00                    | "Basics of market analysys"          |
-| 31         | 20         | 2023-12-28 | 2       | 200                | 0,00          | 13,00                   | "Data-driven marketing introduction" |
-| 32         | 4          | 2024-01-03 | 3       | 100                | 0,00          | 12,00                   | "Introduction to AI"                 |
-| 33         | 4          | 2024-03-04 | 2       | 65                 | 6,00          | 20,00                   | "Functional Programming"             |
-| 34         | 20         | 2024-03-05 | 2       | 200                | 7,00          | 30,00                   | "Digital marketing strategies"       |
-| 35         | 20         | 2024-03-12 | 2       | 200                | 2,00          | 10,00                   | "Introduction to marketing metrics"  |
-
-### StudiesMeetingParticipants
-| meeting_id | participant_id | presence |
-|------------|----------------|----------|
-| 3          | 1              | 0        |
-| 3          | 9              | 1        |
-| 6          | 11             | 1        |
-| 7          | 1              | 1        |
-| 7          | 9              | 0        |
-| 7          | 10             | 0        |
-| 27         | 11             | 1        |
-| 28         | 11             | 0        |
-| 29         | 2              | 1        |
-| 30         | 7              | 1        |
-
-### MeetingType
-| type_id | type_name |
-|---------|-----------|
-| 1       | on-line   |
-| 2       | in-person |
-| 3       | hybrid    |
-
-### Modules
-| module_id | product_id | module_name         | module_type | classroom | start_date | end_date   |
-|-----------|------------|---------------------|-------------|-----------|------------|------------|
-| 1         | 2          | Primary Keys        | 2           | 10        | 2022-12-12 | 2022-12-14 |
-| 2         | 2          | Basic commands      | 1           | NULL      | 2022-12-19 | 2022-12-20 |
-| 3         | 2          | The basics of joins | 1           | NULL      | 2023-01-04 | 2023-01-10 |
-| 4         | 2          | Exercises           | 1           | NULL      | 2023-01-15 | 2023-02-20 |
-| 5         | 6          | Group by your data  | 2           | 15        | 2024-03-20 | 2024-04-20 |
-| 6         | 6          | Sort your data      | 2           | 15        | 2024-04-25 | 2024-04-30 |
-| 7         | 6          | Exercices           | 1           | NULL      | 2024-05-01 | 2024-06-30 |
-| 8         | 10         | Sorting algoritms   | 2           | 20        | 2023-10-10 | 2023-11-10 |
-| 9         | 10         | Graph Algoritms     | 3           | 15        | 2023-11-15 | 2023-12-15 |
-| 10        | 10         | Dynamic Programming | 2           | 20        | 2023-12-20 | 2024-01-20 |
-| 11        | 14         | Files and folders   | 1           | NULL      | 2024-01-05 | 2024-01-10 |
-| 12        | 14         | Grep and awk        | 1           | NULL      | 2024-01-11 | 2024-01-20 |
-| 13        | 14         | Bash and regex      | 1           | NULL      | 2024-01-21 | 2024-01-31 |
-
-### ModulesAttendance
-| participant_id | module_id | presence |
-|----------------|-----------|----------|
-| 1              | 1         | 1        |
-| 1              | 2         | 1        |
-| 1              | 3         | 1        |
-| 1              | 4         | 1        |
-| 3              | 1         | 1        |
-| 3              | 2         | 0        |
-| 3              | 3         | 0        |
-| 3              | 4         | 1        |
-| 5              | 8         | 1        |
-| 5              | 9         | 1        |
-| 7              | 8         | 1        |
-| 7              | 9         | 1        |
-| 9              | 8         | 1        |
-| 9              | 9         | 1        |
-| 10             | 8         | 1        |
-| 10             | 9         | 0        |
-| 11             | 8         | 1        |
-| 11             | 9         | 1        |
-| 12             | 8         | 1        |
-| 12             | 9         | 1        |
-| 13             | 8         | 1        |
-| 13             | 9         | 1        |
-| 14             | 8         | 1        |
-| 14             | 9         | 1        |
-
-### Orders
-| order_id | client_id | payment_status |
-|----------|-----------|----------------|
-| 1        | 1         | 1              |
-| 2        | 7         | 1              |
-| 3        | 9         | 1              |
-| 4        | 15        | 1              |
-| 5        | 23        | 1              |
-| 6        | 30        | 1              |
-| 7        | 24        | 1              |
-| 8        | 24        | 1              |
-| 9        | 4         | 2              |
-| 12       | 1         | 1              |
-| 14       | 4         | 1              |
-| 15       | 7         | 4              |
-| 16       | 11        | 1              |
-| 17       | 5         | 1              |
-| 18       | 13        | 1              |
-| 19       | 3         | 1              |
-| 20       | 3         | 2              |
-| 21       | 15        | 1              |
-| 22       | 9         | 1              |
-| 23       | 30        | 1              |
-| 24       | 23        | 1              |
-| 25       | 4         | 1              |
-| 26       | 23        | 1              |
-| 27       | 23        | 1              |
-| 28       | 24        | 1              |
-| 29       | 3         | 1              |
-| 30       | 4         | 1              |
-| 31       | 5         | 1              |
-| 32       | 29        | 1              |
-| 33       | 5         | 1              |
-
-### Order_details
-| order_id | product_id | is_advance |
-|----------|------------|------------|
-| 1        | 5          | 0          |
-| 1        | 9          | 0          |
-| 1        | 21         | 0          |
-| 2        | 5          | 0          |
-| 3        | 9          | 0          |
-| 3        | 13         | 0          |
-| 4        | 9          | 0          |
-| 5        | 21         | 0          |
-| 6        | 5          | 0          |
-| 7        | 13         | 0          |
-| 7        | 21         | 0          |
-| 8        | 13         | 0          |
-| 8        | 14         | 0          |
-| 8        | 22         | 0          |
-| 12       | 2          | 0          |
-| 12       | 6          | 0          |
-| 12       | 10         | 0          |
-| 12       | 14         | 1          |
-| 14       | 2          | 0          |
-| 14       | 6          | 0          |
-| 15       | 10         | 0          |
-| 15       | 14         | 1          |
-| 16       | 10         | 0          |
-| 17       | 10         | 0          |
-| 18       | 10         | 0          |
-| 19       | 10         | 0          |
-| 20       | 6          | 0          |
-| 21       | 10         | 0          |
-| 22       | 10         | 0          |
-| 23       | 4          | 0          |
-| 24       | 12         | 0          |
-| 25       | 16         | 0          |
-| 26       | 20         | 0          |
-| 27       | 16         | 0          |
-| 28       | 16         | 0          |
-| 29       | 19         | 0          |
-| 30       | 20         | 0          |
-| 31       | 4          | 0          |
-| 32       | 4          | 0          |
-| 33       | 8          | 0          |
-
-### OuterMeetingParticipants
-| participant_id | date       | presence_percentage |
-|----------------|------------|---------------------|
-| 1              | 2023-11-15 | 100                 |
-| 4              | 2023-08-23 | 100                 |
-| 4              | 2023-12-17 | 100                 |
-
-### Payments
-| payment_id | order_id | payment_date | price   | cancelled |
-|------------|----------|--------------|---------|-----------|
-| 4          | 2        | 2023-12-10   | 50,00   | 0         |
-| 5          | 3        | 2023-12-14   | 60,00   | 0         |
-| 6          | 4        | 2023-12-17   | 60,00   | 0         |
-| 7          | 5        | 2023-12-15   | 12,00   | 0         |
-| 8          | 6        | 2023-12-16   | 50,00   | 0         |
-| 9          | 7        | 2023-12-16   | 12,00   | 0         |
-| 14         | 1        | 2023-12-17   | 122,00  | 0         |
-| 15         | 8        | 2023-12-17   | 220,00  | 0         |
-| 22         | 8        | 2023-12-17   | 800,00  | 0         |
-| 23         | 8        | 2023-12-17   | 380,00  | 0         |
-| 24         | 12       | 2022-12-01   | 5250,00 | 0         |
-| 25         | 12       | 2023-10-01   | 4500,00 | 0         |
-| 26         | 14       | 2022-12-05   | 5500,00 | 0         |
-| 27         | 15       | 2023-09-10   | 4250,00 | 0         |
-| 28         | 16       | 2023-07-23   | 4000,00 | 0         |
-| 29         | 17       | 2023-02-20   | 4000,00 | 0         |
-| 30         | 18       | 2023-06-01   | 1500,00 | 1         |
-| 31         | 18       | 2023-06-02   | 1500,00 | 0         |
-| 32         | 18       | 2023-08-01   | 2500,00 | 0         |
-| 33         | 19       | 2023-09-12   | 4000,00 | 0         |
-| 36         | 21       | 2023-10-01   | 4000,00 | 0         |
-| 37         | 22       | 2023-10-02   | 4000,00 | 0         |
-| 38         | 23       | 2023-10-03   | 40,00   | 0         |
-| 39         | 24       | 2023-10-04   | 35,00   | 0         |
-| 40         | 25       | 2023-10-11   | 25,00   | 0         |
-| 41         | 26       | 2023-10-11   | 10,00   | 0         |
-| 42         | 27       | 2023-10-20   | 25,00   | 0         |
-| 43         | 28       | 2023-10-04   | 25,00   | 0         |
-| 44         | 29       | 2023-10-03   | 25,00   | 0         |
-| 45         | 30       | 2023-10-01   | 10,00   | 0         |
-| 46         | 31       | 2023-09-22   | 40,00   | 0         |
-| 47         | 32       | 2023-09-23   | 40,00   | 0         |
-| 48         | 33       | 2023-09-29   | 30,00   | 0         |
-
-### Products
-| product_id | product_type_id | language | academic_id | interpreter_id | translated_to |
-|------------|-----------------|----------|-------------|----------------|---------------|
-| 1          | 1               | 3        | 8           | NULL           | NULL          |
-| 2          | 2               | 2        | 2           | 14             | 1             |
-| 3          | 1               | 4        | 10          | 22             | 1             |
-| 4          | 3               | 1        | 21          | NULL           | NULL          |
-| 5          | 1               | 3        | 2           | NULL           | NULL          |
-| 6          | 2               | 4        | 8           | 22             | 1             |
-| 7          | 4               | 2        | 10          | 14             | 3             |
-| 8          | 3               | 1        | 12          | NULL           | NULL          |
-| 9          | 1               | 3        | 12          | NULL           | NULL          |
-| 10         | 2               | 2        | 2           | NULL           | NULL          |
-| 11         | 4               | 4        | 10          | NULL           | NULL          |
-| 12         | 3               | 1        | 21          | NULL           | NULL          |
-| 13         | 1               | 3        | 21          | NULL           | NULL          |
-| 14         | 2               | 4        | 2           | NULL           | NULL          |
-| 15         | 4               | 2        | 8           | 14             | 3             |
-| 16         | 3               | 2        | 2           | NULL           | NULL          |
-| 17         | 1               | 1        | 8           | 14             | 1             |
-| 18         | 2               | 1        | 8           | 22             | 3             |
-| 19         | 3               | 2        | 10          | NULL           | NULL          |
-| 20         | 3               | 3        | 12          | NULL           | NULL          |
-
-### ProductType
-| procduct_type_id | product_type_name |
-|------------------|-------------------|
-| 1                | webinar           |
-| 2                | course            |
-| 3                | studies           |
-| 4                | meeting           |
-
-### Studies
-| product\_id | name | participants\_limit | full\_price | advance\_price |
-| :--- | :--- | :--- | :--- | :--- |
-| 4 | Computer Science | 50 | 40.0000 | 20.0000 |
-| 8 | Astrology | 20 | 30.0000 | 12.0000 |
-| 12 | Cybersecurity | 30 | 35.0000 | 10.0000 |
-| 16 | Biomedic Engineering | 15 | 50.0000 | 25.0000 |
-| 19 | Economy | 100 | 25.0000 | 10.0000 |
-| 20 | Marketing | 200 | 10.0000 | 5.0000 |
-
-### StudiesMeetings
-| meeting\_id | studies\_id | date | type\_id | participants\_limit | student\_price | outer\_participant\_price |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | 4 | 2023-10-06 | 1 | 50 | 0.0000 | 10.0000 |
-| 2 | 8 | 2023-10-20 | 2 | 30 | 0.0000 | 20.0000 |
-| 3 | 4 | 2023-10-30 | 1 | 60 | 0.0000 | 15.0000 |
-| 4 | 12 | 2023-11-07 | 3 | 50 | 5.0000 | 20.0000 |
-| 5 | 19 | 2023-11-13 | 2 | 100 | 0.0000 | 5.0000 |
-| 6 | 20 | 2023-12-28 | 2 | 200 | 0.0000 | 13.0000 |
-| 7 | 4 | 2024-01-03 | 3 | 100 | 0.0000 | 12.0000 |
-| 8 | 4 | 2024-03-04 | 2 | 65 | 6.0000 | 20.0000 |
-| 9 | 20 | 2024-03-05 | 2 | 200 | 7.0000 | 30.0000 |
-| 10 | 20 | 2024-03-12 | 2 | 200 | 2.0000 | 10.0000 |
-
-### Exams
-| exam\_id | participant\_id | date | points |
-| :--- | :--- | :--- | :--- |
-| 1 | 1 | 2023-10-12 | 60 |
-| 2 | 2 | 2024-12-06 | null |
-| 3 | 7 | 2024-08-14 | null |
-| 4 | 8 | 2023-11-23 | 97 |
-| 5 | 9 | 2024-05-23 | null |
-
-### StudiesParticipants
-| participant\_id | client\_id | product\_id |
-| :--- | :--- | :--- |
-| 1 | 30 | 4 |
-| 2 | 23 | 12 |
-| 3 | 4 | 16 |
-| 4 | 23 | 20 |
-| 5 | 23 | 16 |
-| 6 | 24 | 16 |
-| 7 | 3 | 19 |
-| 8 | 4 | 20 |
-| 9 | 5 | 4 |
-| 10 | 29 | 4 |
-| 11 | 5 | 8 |
-
-### User_type
-| user_type | type_name   |
-|-----------|-------------|
-| 1         | client      |
-| 2         | academic    |
-| 3         | interpreter |
-| 4         | owner       |
-| 5         | manager     |
-| 6         | secretary   |
-### Users
-| user_id | first_name | last_name   | zip_code | city        | street_address             | country | can_pay_days_later | user_type |
-|---------|------------|-------------|----------|-------------|----------------------------|---------|--------------------|-----------|
-| 1       | Jan        | Nowak       | 00-001   | Warsaw      | ul. Prosta 5               | Poland  | 0                  | 1         |
-| 2       | Hans       | Müller      | 10115    | Berlin      | Unter den Linden 15        | Germany | 0                  | 2         |
-| 3       | John       | Smith       | 10001    | New York    | 123 Main St                | USA     | 0                  | 1         |
-| 4       | Alice      | Williams    | SW1A 1AA | London      | Buckingham Palace Rd       | England | 0                  | 1         |
-| 5       | Giuseppe   | Rossi       | 00100    | Rome        | Via del Corso 10           | Italy   | 0                  | 1         |
-| 6       | Katarzyna  | Kowalska    | 03-040   | Krakow      | ul. Glówna 20              | Poland  | 0                  | 1         |
-| 7       | Lukas      | Schmidt     | 10178    | Berlin      | Alexanderplatz 1           | Germany | 0                  | 1         |
-| 8       | Emily      | Jones       | 90210    | Los Angeles | 345 Maple St               | USA     | 0                  | 2         |
-| 9       | Sophie     | Taylor      | SW1A 1BA | London      | Westminster Bridge Rd      | England | 0                  | 1         |
-| 10      | Luca       | Bianchi     | 00144    | Rome        | Via Appia Nuova 25         | Italy   | 0                  | 2         |
-| 11      | Marek      | Wozniak     | 50-001   | Wroclaw     | ul. Rynek 1                | Poland  | 0                  | 1         |
-| 12      | Elena      | Schneider   | 60311    | Frankfurt   | Hauptwache 6               | Germany | 0                  | 2         |
-| 13      | Michael    | Brown       | 33101    | Miami       | 678 Ocean Dr               | USA     | 0                  | 1         |
-| 14      | Olivia     | Smith       | SW1A 1AB | London      | Buckingham Gate 12         | England | 0                  | 3         |
-| 15      | Giovanni   | Ferrari     | 00192    | Rome        | Via della Conciliazione 50 | Italy   | 7                  | 1         |
-| 16      | Karolina   | Lewandowska | 02-020   | Warsaw      | ul. Kwiatowa 7             | Poland  | 0                  | 4         |
-| 17      | Mateusz    | Kowalczyk   | 50-500   | Wroclaw     | ul. Piekna 12              | Poland  | 0                  | 5         |
-| 18      | Adrian     | Szymanski   | 80-080   | Gdansk      | ul. Morska 3               | Poland  | 0                  | 6         |
-| 19      | Ewa        | Jankowska   | 01-010   | Lodz        | ul. Ogrodowa 25            | Poland  | 0                  | 6         |
-| 20      | Mikolaj    | Wójcik      | 33-330   | Krakow      | ul. Slowackiego 10         | Poland  | 0                  | 5         |
-| 21      | Aleksandra | Dabrowska   | 03-030   | Warsaw      | ul. Lipowa 8               | Poland  | 0                  | 2         |
-| 22      | Andrzej    | Kowalczyk   | 50-501   | Wroclaw     | ul. Zielona 14             | Poland  | 0                  | 3         |
-| 23      | Welby      | Churchouse  | 22300    | Dallas      | Hunt St 10                 | USA     | 0                  | 1         |
-| 24      | Ive        | Boyington   | 10550    | Hamburg     | Alter Vall 43              | Germany | 0                  | 1         |
-| 25      | Eric       | Warren      | 90543    | Brema       | Neuenstrasse 12            | Germany | 0                  | 6         |
-| 26      | Vincent    | Cunningham  | 15250    | Vancouver   | Davie St 12                | Canada  | 0                  | 1         |
-| 27      | Janina     | Wiśniowska  | 43-442   | Szczeciń    | ul. Długa 15               | Poland  | 0                  | 2         |
-| 28      | John       | Richardson  | 32455    | Florencja   | via Palazzulo 95           | Italy   | 0                  | 5         |
-| 29      | Alexander  | Fowler      | 43533    | Neapol      | Via Campania 5             | Italy   | 0                  | 1         |
-| 30      | Andrzej    | Bogdański   | 35-234   | Gdańsk      | ul. Portowa 41             | Poland  | 0                  | 1         |
-
-### WebinarParticipants
-| product_id | client_id |
-|------------|-----------|
-| 1          | 1         |
-| 1          | 3         |
-| 5          | 3         |
-| 9          | 3         |
-| 13         | 4         |
-| 9          | 7         |
-| 9          | 9         |
-| 5          | 11        |
-| 9          | 13        |
-| 1          | 15        |
-
-### Webinars
-| product_id | webinar_name                      | posted_date | price |
-|------------|-----------------------------------|-------------|-------|
-| 1          | Present Simple for beginners      | 2023-12-02  | NULL  |
-| 5          | Cooking is fun                    | 2023-01-01  | 50    |
-| 9          | Robotics for children             | 2023-10-11  | 60    |
-| 13         | Advanced constructions in English | 2023-12-10  | NULL  |
-
 
 ## Widoki
 
@@ -3257,6 +2767,22 @@ AS
 go
 ```
 
+#### CheckExamMaxPoints
+Pozwala sprawdzić maksymalną ilość punktów na danym egzaminie
+```sql
+CREATE FUNCTION checkExamMaxPoints(@exam_id int)
+    RETURNS int
+AS
+BEGIN
+    DECLARE @exam_max_points int
+    SET @exam_max_points = ISNULL((SELECT max_points
+                             FROM Exams
+                             WHERE exam_id = @exam_id), 0)
+    RETURN @exam_max_points
+END
+go
+```
+
 #### CheckExamDate
 Pozwala sprawdzić datę wybranego egzaminu
 ```sql
@@ -3537,3 +3063,501 @@ AS RETURN
     WHERE status_name = 'paid' AND client_id = @client_id
 go
 ```
+
+## Triggery
+
+## Dane testowe
+
+### Academics
+| academic\_id |
+| :--- |
+| 2 |
+| 8 |
+| 10 |
+| 12 |
+| 21 |
+| 27 |
+
+
+### Apprenticeship
+| participant_id | date       | presence_percentage |
+|----------------|------------|---------------------|
+| 1              | 2023-11-15 | 100                 |
+| 4              | 2023-08-23 | 100                 |
+| 4              | 2023-12-17 | 100                 |
+
+### Clients
+| client\_id | can\_pay\_days\_later |
+| :--- | :--- |
+| 1 | 0 |
+| 3 | 0 |
+| 4 | 0 |
+| 5 | 12 |
+| 6 | 0 |
+| 7 | 0 |
+| 9 | 10 |
+| 11 | 0 |
+| 13 | 0 |
+| 15 | 0 |
+| 23 | 0 |
+| 24 | 0 |
+| 26 | 0 |
+| 29 | 2 |
+| 30 | 0 |
+| 31 | 4 |
+| 38 | 0 |
+
+
+### Courses
+| product\_id | course\_name | start\_date | end\_date | participants\_limit | advance\_price | full\_price |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 2 | SQL for begineers | 2022-12-12 | 2023-02-20 | 15 | 500.0000 | 2500.0000 |
+| 6 | SQL for intermediate | 2024-03-20 | 2024-06-30 | 10 | 1000.0000 | 3000.0000 |
+| 10 | Python algoritms and structures | 2023-10-10 | 2024-01-20 | 25 | 1500.0000 | 4000.0000 |
+| 14 | UNIX comends | 2024-01-05 | 2024-01-31 | 20 | 200.0000 | 1000.0000 |
+| 22 | Object oriented Programming in C++ | 2024-01-01 | 2024-06-28 | 23 | 20.0000 | 400.0000 |
+
+
+### CoursesParticipants
+| participant\_id | client\_id | product\_id |
+| :--- | :--- | :--- |
+| 1 | 1 | 2 |
+| 2 | 1 | 6 |
+| 3 | 4 | 2 |
+| 4 | 4 | 6 |
+| 5 | 7 | 10 |
+| 6 | 7 | 14 |
+| 7 | 1 | 10 |
+| 8 | 1 | 14 |
+| 9 | 11 | 10 |
+| 10 | 15 | 10 |
+| 11 | 5 | 10 |
+| 12 | 13 | 10 |
+| 13 | 9 | 10 |
+| 14 | 3 | 10 |
+| 15 | 24 | 22 |
+| 16 | 24 | 14 |
+
+
+### Exams
+| exam\_id | studies\_id | date | max\_points |
+| :--- | :--- | :--- | :--- |
+| 1 | 4 | 2023-10-12 | 60 |
+| 2 | 8 | 2024-12-06 | 100 |
+| 3 | 12 | 2024-08-14 | 20 |
+| 4 | 16 | 2023-11-23 | 97 |
+| 5 | 19 | 2024-05-23 | 150 |
+| 6 | 4 | 2023-12-16 | 100 |
+| 7 | 20 | 2023-10-04 | 80 |
+| 8 | 20 | 2023-12-08 | 60 |
+
+
+### ExamsTaken
+| exam\_id | participant\_id | points |
+| :--- | :--- | :--- |
+| 1 | 1 | 55 |
+| 6 | 1 | 92 |
+| 7 | 4 | 66 |
+| 8 | 4 | 53 |
+| 4 | 5 | 82 |
+| 4 | 6 | 95 |
+| 1 | 9 | 40 |
+| 1 | 10 | 49 |
+
+
+### Interpreted_language
+| interpreter\_id | translate\_from | translate\_to |
+| :--- | :--- | :--- |
+| 14 | 2 | 1 |
+| 14 | 2 | 3 |
+| 14 | 3 | 1 |
+| 22 | 4 | 1 |
+
+
+### Interpreters
+| interpreter\_id |
+| :--- |
+| 14 |
+| 22 |
+
+
+### Languages
+| language\_id | language\_name |
+| :--- | :--- |
+| 3 | English |
+| 2 | German |
+| 4 | Italian |
+| 1 | Polish |
+| 5 | Spanish |
+
+### MeetingType
+| type_id | type_name |
+|---------|-----------|
+| 1       | on-line   |
+| 2       | in-person |
+| 3       | hybrid    |
+
+### Modules
+| module\_id | product\_id | module\_name | module\_type | classroom | start\_date | end\_date |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | 2 | Primary Keys | 2 | 10 | 2022-12-12 | 2022-12-14 |
+| 2 | 2 | Basic commands | 1 | null | 2022-12-19 | 2022-12-20 |
+| 3 | 2 | The basics of joins | 1 | null | 2023-01-04 | 2023-01-10 |
+| 4 | 2 | Exercises | 1 | null | 2023-01-15 | 2023-02-20 |
+| 5 | 6 | Group by your data | 2 | 15 | 2024-03-20 | 2024-04-20 |
+| 6 | 6 | Sort your data | 2 | 15 | 2024-04-25 | 2024-04-30 |
+| 7 | 6 | Exercices | 1 | null | 2024-05-01 | 2024-06-30 |
+| 8 | 10 | Sorting algoritms | 2 | 20 | 2023-10-10 | 2023-11-10 |
+| 9 | 10 | Graph Algoritms | 3 | 15 | 2023-11-15 | 2023-12-15 |
+| 10 | 10 | Dynamic Programming | 2 | 20 | 2023-12-20 | 2024-01-20 |
+| 11 | 14 | Files and folders | 1 | null | 2024-01-05 | 2024-01-10 |
+| 12 | 14 | Grep and awk | 1 | null | 2024-01-11 | 2024-01-20 |
+| 13 | 14 | Bash and regex | 1 | null | 2024-01-21 | 2024-01-31 |
+
+### ModulesAttendance
+| participant\_id | module\_id | presence |
+| :--- | :--- | :--- |
+| 1 | 1 | true |
+| 1 | 2 | true |
+| 1 | 3 | true |
+| 1 | 4 | true |
+| 3 | 1 | true |
+| 3 | 2 | false |
+| 3 | 3 | false |
+| 3 | 4 | true |
+| 5 | 8 | true |
+| 5 | 9 | true |
+| 7 | 8 | true |
+| 7 | 9 | true |
+| 9 | 8 | true |
+| 9 | 9 | true |
+| 10 | 8 | true |
+| 10 | 9 | false |
+| 11 | 8 | true |
+| 11 | 9 | true |
+| 12 | 8 | true |
+| 12 | 9 | true |
+| 13 | 8 | true |
+| 13 | 9 | true |
+| 14 | 8 | true |
+| 14 | 9 | true |
+| 15 | 1 | true |
+| 15 | 13 | true |
+
+### Order_details
+| order\_id | product\_id | is\_advance |
+| :--- | :--- | :--- |
+| 1 | 5 | false |
+| 1 | 9 | false |
+| 1 | 21 | false |
+| 2 | 5 | false |
+| 3 | 9 | false |
+| 3 | 13 | false |
+| 4 | 9 | false |
+| 5 | 21 | false |
+| 6 | 5 | false |
+| 7 | 13 | false |
+| 7 | 21 | false |
+| 8 | 13 | false |
+| 8 | 14 | false |
+| 8 | 22 | false |
+| 12 | 2 | false |
+| 12 | 6 | false |
+| 12 | 10 | false |
+| 12 | 14 | true |
+| 14 | 2 | false |
+| 14 | 6 | false |
+| 15 | 10 | false |
+| 15 | 14 | true |
+| 16 | 10 | false |
+| 17 | 10 | false |
+| 18 | 10 | false |
+| 19 | 10 | false |
+| 20 | 6 | false |
+| 21 | 10 | false |
+| 22 | 10 | false |
+| 23 | 4 | false |
+| 24 | 12 | false |
+| 25 | 16 | false |
+| 26 | 20 | false |
+| 27 | 16 | false |
+| 28 | 16 | false |
+| 29 | 19 | false |
+| 30 | 20 | false |
+| 31 | 4 | false |
+| 32 | 4 | false |
+| 33 | 8 | false |
+
+### Orders
+| order\_id | client\_id | payment\_status |
+| :--- | :--- | :--- |
+| 1 | 1 | 1 |
+| 2 | 7 | 1 |
+| 3 | 9 | 1 |
+| 4 | 15 | 1 |
+| 5 | 23 | 1 |
+| 6 | 30 | 1 |
+| 7 | 24 | 1 |
+| 8 | 24 | 1 |
+| 9 | 4 | 2 |
+| 12 | 1 | 1 |
+| 14 | 4 | 1 |
+| 15 | 7 | 4 |
+| 16 | 11 | 1 |
+| 17 | 5 | 1 |
+| 18 | 13 | 1 |
+| 19 | 3 | 1 |
+| 20 | 3 | 2 |
+| 21 | 15 | 1 |
+| 22 | 9 | 1 |
+| 23 | 30 | 1 |
+| 24 | 23 | 1 |
+| 25 | 4 | 1 |
+| 26 | 23 | 1 |
+| 27 | 23 | 1 |
+| 28 | 24 | 1 |
+| 29 | 3 | 1 |
+| 30 | 4 | 1 |
+| 31 | 5 | 1 |
+| 32 | 29 | 1 |
+| 33 | 5 | 1 |
+
+
+### OuterMeetingParticipants
+| client\_id | meeting\_id | presence |
+| :--- | :--- | :--- |
+| 1 | 24 | false |
+| 3 | 24 | false |
+| 5 | 24 | false |
+| 38 | 24 | false |
+
+
+### Payments
+| payment\_id | order\_id | payment\_date | price | cancelled |
+| :--- | :--- | :--- | :--- | :--- |
+| 4 | 2 | 2023-12-10 | 50.0000 | false |
+| 5 | 3 | 2023-12-14 | 60.0000 | false |
+| 6 | 4 | 2023-12-17 | 60.0000 | false |
+| 7 | 5 | 2023-12-15 | 12.0000 | false |
+| 8 | 6 | 2023-12-16 | 50.0000 | false |
+| 9 | 7 | 2023-12-16 | 12.0000 | false |
+| 14 | 1 | 2023-12-17 | 122.0000 | false |
+| 15 | 8 | 2023-12-17 | 220.0000 | false |
+| 22 | 8 | 2023-12-17 | 800.0000 | false |
+| 23 | 8 | 2023-12-17 | 380.0000 | false |
+| 24 | 12 | 2022-12-01 | 5250.0000 | false |
+| 25 | 12 | 2023-10-01 | 4500.0000 | false |
+| 26 | 14 | 2022-12-05 | 5500.0000 | false |
+| 27 | 15 | 2023-09-10 | 4250.0000 | false |
+| 28 | 16 | 2023-07-23 | 4000.0000 | false |
+| 29 | 17 | 2023-02-20 | 4000.0000 | false |
+| 30 | 18 | 2023-06-01 | 1500.0000 | true |
+| 31 | 18 | 2023-06-02 | 1500.0000 | false |
+| 32 | 18 | 2023-08-01 | 2500.0000 | false |
+| 33 | 19 | 2023-09-12 | 4000.0000 | false |
+| 36 | 21 | 2023-10-01 | 4000.0000 | false |
+| 37 | 22 | 2023-10-02 | 4000.0000 | false |
+| 38 | 23 | 2023-10-03 | 40.0000 | false |
+| 39 | 24 | 2023-10-04 | 35.0000 | false |
+| 40 | 25 | 2023-10-11 | 25.0000 | false |
+| 41 | 26 | 2023-10-11 | 10.0000 | false |
+| 42 | 27 | 2023-10-20 | 25.0000 | false |
+| 43 | 28 | 2023-10-04 | 25.0000 | false |
+| 44 | 29 | 2023-10-03 | 25.0000 | false |
+| 45 | 30 | 2023-10-01 | 10.0000 | false |
+| 46 | 31 | 2023-09-22 | 40.0000 | false |
+| 47 | 32 | 2023-09-23 | 40.0000 | false |
+| 48 | 33 | 2023-09-29 | 30.0000 | false |
+
+
+### Products
+| product\_id | product\_type\_id | language | academic\_id | interpreter\_id | translated\_to |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | 1 | 3 | 8 | null | null |
+| 2 | 2 | 2 | 2 | 14 | 1 |
+| 3 | 1 | 4 | 10 | 22 | 1 |
+| 4 | 3 | 1 | 21 | null | null |
+| 5 | 1 | 3 | 2 | null | null |
+| 6 | 2 | 4 | 8 | 22 | 1 |
+| 7 | 4 | 2 | 10 | 14 | 3 |
+| 8 | 3 | 1 | 12 | null | null |
+| 9 | 1 | 3 | 12 | null | null |
+| 10 | 2 | 2 | 2 | null | null |
+| 11 | 4 | 4 | 10 | null | null |
+| 12 | 3 | 1 | 21 | null | null |
+| 13 | 1 | 3 | 21 | null | null |
+| 14 | 2 | 4 | 2 | null | null |
+| 15 | 4 | 2 | 8 | 14 | 3 |
+| 16 | 3 | 2 | 2 | null | null |
+| 17 | 1 | 1 | 8 | 14 | 1 |
+| 18 | 2 | 1 | 8 | 22 | 3 |
+| 19 | 3 | 2 | 10 | null | null |
+| 20 | 3 | 3 | 12 | null | null |
+| 21 | 1 | 3 | 2 | null | null |
+| 22 | 2 | 2 | 2 | null | null |
+| 23 | 3 | 2 | 2 | null | null |
+| 24 | 4 | 2 | 2 | null | null |
+| 26 | 4 | 2 | 2 | null | null |
+| 27 | 4 | 3 | 12 | null | null |
+| 28 | 4 | 2 | 10 | null | null |
+| 29 | 4 | 2 | 12 | 14 | 1 |
+| 30 | 4 | 2 | 8 | null | null |
+| 31 | 4 | 1 | 8 | 22 | 3 |
+| 32 | 4 | 1 | 21 | null | null |
+| 33 | 4 | 1 | 21 | null | null |
+| 34 | 4 | 2 | 2 | 22 | 3 |
+| 35 | 4 | 3 | 2 | null | null |
+
+
+### ProductType
+| procduct_type_id | product_type_name |
+|------------------|-------------------|
+| 1                | webinar           |
+| 2                | course            |
+| 3                | studies           |
+| 4                | meeting           |
+
+
+### Statuses
+| status\_id | status\_name |
+| :--- | :--- |
+| 1 | paid |
+| 2 | not\_paid |
+| 4 | partially\_paid |
+
+
+### Studies
+| product\_id | name | participants\_limit | full\_price | advance\_price |
+| :--- | :--- | :--- | :--- | :--- |
+| 4 | Computer Science | 50 | 40.0000 | 20.0000 |
+| 8 | Astrophysics | 20 | 30.0000 | 12.0000 |
+| 12 | Cybersecurity | 30 | 35.0000 | 10.0000 |
+| 16 | Biomedic Engineering | 15 | 50.0000 | 25.0000 |
+| 19 | Economy | 100 | 25.0000 | 10.0000 |
+| 20 | Marketing | 200 | 10.0000 | 5.0000 |
+| 23 | Geschichte und Okonomie | 23 | 2000.0000 | 100.0000 |
+
+### StudiesMeetings
+| meeting\_id | studies\_id | date | type\_id | participants\_limit | student\_price | outer\_participant\_price | meeting\_topic |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 3 | 4 | 2023-10-30 | 1 | 60 | 0.0000 | 15.0000 | "Programming Basics" |
+| 6 | 8 | 2023-10-20 | 2 | 30 | 0.0000 | 20.0000 | "Black holes explained" |
+| 7 | 4 | 2023-12-25 | 1 | 50 | 0.0000 | 10.0000 | "Operating Systems" |
+| 11 | 4 | 2023-12-15 | 2 | 65 | 0.0000 | 5.0000 | "Network Architecture" |
+| 15 | 4 | 2023-11-22 | 1 | 100 | 60.0000 | 100.0000 | "Algorithms Part 1" |
+| 24 | 4 | 2023-12-23 | 1 | 50 | 60.0000 | 200.0000 | "Object Oriented Programing" |
+| 26 | 4 | 2023-12-05 | 1 | 150 | 60.0000 | 15.0000 | "Algorithms Part 2" |
+| 27 | 8 | 2023-10-18 | 2 | 35 | 60.0000 | 20.0000 | "Introduction to Astrophysiscs " |
+| 28 | 8 | 2023-10-25 | 3 | 40 | 60.0000 | 100.0000 | "Modern cosmology theories" |
+| 29 | 12 | 2023-12-24 | 3 | 50 | 5.0000 | 20.0000 | "Introduction to cybersecurity" |
+| 30 | 19 | 2023-11-13 | 2 | 100 | 0.0000 | 5.0000 | "Basics of market analysys" |
+| 31 | 20 | 2023-12-28 | 2 | 200 | 0.0000 | 13.0000 | "Data-driven marketing introduction" |
+| 32 | 4 | 2024-01-03 | 3 | 100 | 0.0000 | 12.0000 | "Introduction to AI" |
+| 33 | 4 | 2024-03-04 | 2 | 65 | 6.0000 | 20.0000 | "Functional Programming" |
+| 34 | 20 | 2024-03-05 | 2 | 200 | 7.0000 | 30.0000 | "Digital marketing strategies" |
+| 35 | 20 | 2024-03-12 | 2 | 200 | 2.0000 | 10.0000 | "Introduction to marketing metrics" |
+
+### StudiesMeetingParticipants
+| meeting\_id | participant\_id | presence |
+| :--- | :--- | :--- |
+| 3 | 1 | false |
+| 3 | 9 | true |
+| 6 | 11 | true |
+| 7 | 1 | true |
+| 7 | 9 | false |
+| 7 | 10 | false |
+| 27 | 11 | true |
+| 28 | 11 | false |
+| 29 | 2 | true |
+| 30 | 7 | true |
+
+### StudiesParticipants
+| participant\_id | client\_id | product\_id |
+| :--- | :--- | :--- |
+| 1 | 30 | 4 |
+| 2 | 23 | 12 |
+| 3 | 4 | 16 |
+| 4 | 23 | 20 |
+| 5 | 23 | 16 |
+| 6 | 24 | 16 |
+| 7 | 3 | 19 |
+| 8 | 4 | 20 |
+| 9 | 5 | 4 |
+| 10 | 29 | 4 |
+| 11 | 5 | 8 |
+
+
+### User_type
+| user_type | type_name   |
+|-----------|-------------|
+| 1         | client      |
+| 2         | academic    |
+| 3         | interpreter |
+| 4         | owner       |
+| 5         | manager     |
+| 6         | secretary   |
+
+### Users
+| user\_id | first\_name | last\_name | zip\_code | city | street\_address | country | user\_type | email |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | Jan | Nowak | 00-001 | Warsaw | ul. Prosta 5 | Poland                                             | 1 | Jan.Nowak@gmail.com |
+| 2 | Hans | Müller | 10115 | Berlin | Unter den Linden 15 | Germany                                            | 2 | Hans.Müller@gmail.com |
+| 3 | John | Smith | 10001 | New York | 123 Main St | USA                                                | 1 | John.Smith@gmail.com |
+| 4 | Alice | Williams | SW1A 1AA | London | Buckingham Palace Rd | England                                            | 1 | Alice.Williams@gmail.com |
+| 5 | Giuseppe | Rossi | 00100 | Rome | Via del Corso 10 | Italy                                              | 1 | Giuseppe.Rossi@gmail.com |
+| 6 | Katarzyna | Kowalska | 03-040 | Krakow | ul. Glówna 20 | Poland                                             | 1 | Katarzyna.Kowalska@gmail.com |
+| 7 | Lukas | Schmidt | 10178 | Berlin | Alexanderplatz 1 | Germany                                            | 1 | Lukas.Schmidt@gmail.com |
+| 8 | Emily | Jones | 90210 | Los Angeles | 345 Maple St | USA                                                | 2 | Emily.Jones@gmail.com |
+| 9 | Sophie | Taylor | SW1A 1BA | London | Westminster Bridge Rd | England                                            | 1 | Sophie.Taylor@gmail.com |
+| 10 | Luca | Bianchi | 00144 | Rome | Via Appia Nuova 25 | Italy                                              | 2 | Luca.Bianchi@gmail.com |
+| 11 | Marek | Wozniak | 50-001 | Wroclaw | ul. Rynek 1 | Poland                                             | 1 | Marek.Wozniak@gmail.com |
+| 12 | Elena | Schneider | 60311 | Frankfurt | Hauptwache 6 | Germany                                            | 2 | Elena.Schneider@gmail.com |
+| 13 | Michael | Brown | 33101 | Miami | 678 Ocean Dr | USA                                                | 1 | Michael.Brown@gmail.com |
+| 14 | Olivia | Smith | SW1A 1AB | London | Buckingham Gate 12 | England                                            | 3 | Olivia.Smith@gmail.com |
+| 15 | Giovanni | Ferrari | 00192 | Rome | Via della Conciliazione 50 | Italy                                              | 1 | Giovanni.Ferrari@gmail.com |
+| 16 | Karolina | Lewandowska | 02-020 | Warsaw | ul. Kwiatowa 7 | Poland                                             | 4 | Karolina.Lewandowska@gmail.com |
+| 17 | Mateusz | Kowalczyk | 50-500 | Wroclaw | ul. Piekna 12 | Poland                                             | 5 | Mateusz.Kowalczyk@gmail.com |
+| 18 | Adrian | Szymanski | 80-080 | Gdansk | ul. Morska 3 | Poland                                             | 6 | Adrian.Szymanski@gmail.com |
+| 19 | Ewa | Jankowska | 01-010 | Lodz | ul. Ogrodowa 25 | Poland                                             | 6 | Ewa.Jankowska@gmail.com |
+| 20 | Mikolaj | Wójcik | 33-330 | Krakow | ul. Slowackiego 10 | Poland                                             | 5 | Mikolaj.Wójcik@gmail.com |
+| 21 | Aleksandra | Dabrowska | 03-030 | Warsaw | ul. Lipowa 8 | Poland                                             | 2 | Aleksandra.Dabrowska@gmail.com |
+| 22 | Andrzej | Kowalczyk | 50-501 | Wroclaw | ul. Zielona 14 | Poland                                             | 3 | Andrzej.Kowalczyk@gmail.com |
+| 23 | Welby | Churchouse | 22300 | Dallas | Hunt St 10 | USA                                                | 1 | Welby.Churchouse@gmail.com |
+| 24 | Ive | Boyington | 10550 | Hamburg | Alter Vall 43 | Germany                                            | 1 | Ive.Boyington@gmail.com |
+| 25 | Eric  | Warren | 90543 | Brema | Neuenstrasse 12 | Germany                                            | 6 | Eric.Warren@gmail.com |
+| 26 | Vincent  | Cunningham | 15250 | Vancouver | Davie St 12 | Canada                                             | 1 | Vincent.Cunningham@gmail.com |
+| 27 | Janina | Wiśniowska | 43-442 | Szczeciń | ul. Długa 15 | Poland                                             | 2 | Janina.Wiśniowska@gmail.com |
+| 28 | John  | Richardson | 32455 | Florencja | via Palazzulo 95 | Italy                                              | 6 | John.Richardson@gmail.com |
+| 29 | Alexander  | Fowler | 43533 | Neapol | Via Campania 5 | Italy                                              | 1 | Alexander..Fowler@gmail.com |
+| 30 | Andrzej | Bogdański | 35-234 | Gdańsk | ul. Portowa 41 | Poland                                             | 1 | Andrzej.Bogdański@gmail.com |
+| 31 | Mark | Brown | 12-234 | London | Downing Street 5 | England | 1 | br@gmail.com |
+| 38 | Aleksander | Kowalski | 20-200 | Kraków | Lea 5 | Poland | 1 | alkowalski@gmail.com |
+
+### WebinarParticipants
+| product\_id | client\_id |
+| :--- | :--- |
+| 1 | 1 |
+| 5 | 1 |
+| 9 | 1 |
+| 21 | 1 |
+| 1 | 3 |
+| 5 | 3 |
+| 9 | 3 |
+| 13 | 4 |
+| 9 | 7 |
+| 9 | 9 |
+| 5 | 11 |
+| 9 | 13 |
+| 1 | 15 |
+| 13 | 24 |
+
+### Webinars
+| product\_id | webinar\_name | posted\_date | price |
+| :--- | :--- | :--- | :--- |
+| 1 | Present Simple for beginners | 2023-12-02 | 0.0000 |
+| 5 | Cooking is fun | 2023-01-01 | 50.0000 |
+| 9 | Robotics for children | 2023-10-11 | 60.0000 |
+| 13 | Advanced constructions in English | 2023-12-12 | 0.0000 |
+| 21 | First Aid Basics | 2023-12-14 | 12.0000 |
+
+
