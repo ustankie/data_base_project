@@ -1,3 +1,9 @@
+Systemy Baz Danych 
+==============
+***2023/2024 – projekt***
+
+**Authors:** *Urszula Stankiewicz, Michalina Hytrek, Łukasz Kwinta*
+
 ## 1. Opis systemu
 
 Z tworzonej bazy danych skorzysta firma oferująca różnego rodzaju kursy i szkolenia:
