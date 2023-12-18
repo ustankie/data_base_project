@@ -989,7 +989,7 @@ FROM Modules as m
 GO
 ```
 
-### Exams Stats
+#### Exams Stats
 
 Lista egzaminów wraz z srednia ilościa punktów uzyskanych przez studentów
 
@@ -1013,6 +1013,54 @@ FROM Apprenticeship as a
 GROUP BY a.participant_id
 ```
 
+### Dla Managera
+#### Financial Report
+Przedstawia podsumowanie finansowe 
+```sql
+CREATE VIEW FinancialReport AS
+SELECT dbo.getProductName(Products.product_id) AS product_name, product_type_name, SUM(price) AS total_income
+FROM Payments
+         INNER JOIN Orders ON Payments.order_id = Orders.order_id
+         INNER JOIN Order_details ON Orders.order_id = Order_details.order_id
+         INNER JOIN Products ON Order_details.product_id = Products.product_id
+         INNER JOIN ProductType ON Products.product_type_id = ProductType.product_type_id
+GROUP BY Products.product_id, product_type_name
+go
+```
+
+#### GraduationCandidates
+Przedstawia listę osób które zaliczyły studia lub kurs - są kandydatami do otrzymania certyfikatu
+```sql
+CREATE VIEW GraduationCandidates AS
+    SELECT first_name, last_name, dbo.getProductName(product_id) AS product_name
+    FROM StudiesParticipants
+        INNER JOIN Clients ON StudiesParticipants.client_id = Clients.client_id
+        INNER JOIN Users ON Clients.client_id = Users.user_id
+    WHERE dbo.studiesPass(participant_id) = 1
+    UNION
+    SELECT first_name, last_name, dbo.getProductName(product_id) AS product_name
+    FROM CoursesParticipants
+        INNER JOIN Clients ON CoursesParticipants.client_id = Clients.client_id
+        INNER JOIN Users ON Clients.client_id = Users.user_id
+    WHERE dbo.coursePass(participant_id) = 1
+go
+
+```
+
+#### All Meetings
+Wyświetla daty wszystkich spotkań 
+```sql
+CREATE VIEW AllMeetings AS
+    SELECT 'Module' AS type, module_name AS title, start_date AS date
+    FROM Modules
+    UNION
+    SELECT 'Studies Meeting' AS type, meeting_topic AS title, date AS date
+    FROM StudiesMeetings
+    UNION
+    SELECT 'Webinar' AS type, webinar_name, posted_date AS date
+    FROM Webinars
+go
+```
 ## Procedury
 
 ### AddWebinar
@@ -2592,6 +2640,30 @@ END
 
 ## Funkcje
 
+### Ogólne
+
+##### GetProductName
+Umożliwia konwersję id productu na nazwę, wykorzystrywana w innych funkcjach i widokach
+```sql
+CREATE FUNCTION getProductName(@product_id int)
+    RETURNS nvarchar(50)
+AS
+    BEGIN
+        DECLARE @product_type nvarchar(50)
+        SET @product_type = ISNULL((SELECT product_type_name
+                             FROM Products INNER JOIN ProductType ON Products.product_type_id = ProductType.product_type_id
+                             WHERE product_id = @product_id), 'Nan')
+
+        RETURN CASE @product_type
+                WHEN 'Nan' THEN ''
+                WHEN 'webinar' THEN (SELECT webinar_name FROM Webinars WHERE product_id = @product_id)
+                WHEN 'studies' THEN (SELECT name FROM Studies WHERE product_id = @product_id)
+                WHEN 'meeting' THEN (SELECT meeting_topic FROM StudiesMeetings WHERE meeting_id = @product_id)
+                WHEN 'course' THEN (SELECT course_name FROM Courses WHERE product_id = @product_id)
+            END
+    END
+```
+
 ### Sekretarz
 
 #### ClientsExams
@@ -2689,22 +2761,25 @@ END
 Sprawdzenie procentowej obecności na modułach w danym kursie
 
 ```sql
-CREATE FUNCTION coursesPresence(@participant_id int, @product_id int)
+CREATE FUNCTION [dbo].[coursesPresence](@participant_id int, @product_id int)
 	RETURNS FLOAT
 AS
 BEGIN
 	DECLARE @presence float
 	SET @presence = ISNULL((SELECT COUNT(ma.presence)
-				FROM ModulesAttendance as ma
-					inner join Modules as m
-				on m.module_id=ma.module_id and m.product_id = @product_id
-				WHERE ma.participant_id=@participant_id and ma.presence=1),0)
+								FROM ModulesAttendance as ma
+								inner join Modules as m
+									on m.module_id=ma.module_id and m.product_id = @product_id
+								WHERE ma.participant_id=@participant_id and ma.presence=1),0)
 	DECLARE @modules_num int
 	SET @modules_num = ISNULL((SELECT COUNT(module_id)
-				FROM Modules
-				WHERE product_id = @product_id),0)
+						FROM Modules
+						WHERE product_id = @product_id),0)
+	IF @modules_num = 0
+	    RETURN 100
 	RETURN (@presence/@modules_num) *100
 END
+go
 ```
 
 #### CoursesFreeSlots
@@ -2745,6 +2820,20 @@ CREATE FUNCTION clientCourses(@client_id int)
 ```
 
 ### Studia
+##### StudiesPass
+Umożliwia sprawdzenie czy dany uczesnik studiów zaliczył studia
+```sql
+CREATE FUNCTION studiesPass(@participant_id int)
+    RETURNS bit
+AS
+    BEGIN
+       IF dbo.checkApprenticeshipStatus(@participant_id) = 1 AND
+          dbo.studiesPresence(@participant_id) >= 80 AND
+          dbo.checkExamStatus(@participant_id) = 1
+            RETURN 1
+       RETURN 0
+    END
+```
 
 #### StudiesPresence
 
@@ -2761,7 +2850,7 @@ AS
                                     INNER JOIN StudiesMeetingParticipants ON StudiesMeetings.meeting_id = StudiesMeetingParticipants.meeting_id
                                   WHERE date < GETDATE() AND participant_id = @participant_id), 0)
         IF @meetingsCount = 0 BEGIN
-           RETURN null
+           RETURN 100
         END
 
         DECLARE @attendedMeetings int
@@ -2792,6 +2881,26 @@ AS
             INNER JOIN Exams ON ExamsTaken.exam_id = Exams.exam_id
             INNER JOIN dbo.Studies S on Exams.studies_id = S.product_id
         WHERE participant_id = @student_id
+```
+#### checkExamStatus
+Umożliwia sprawdzenie czy dany uczestnik studiów zaliczył egzaminy 
+
+```sql
+CREATE FUNCTION checkExamStatus(@participan_id int)
+    RETURNS bit
+AS
+    BEGIN
+        DECLARE @passed_exams_count int
+        SET @passed_exams_count = ISNULL((SELECT COUNT(*)
+                                          FROM dbo.getExamScores(@participan_id)
+                                          WHERE percentScore >= 50), 0)
+        IF @passed_exams_count >= 1
+            RETURN 1
+        RETURN 0
+    END
+go
+
+
 ```
 
 #### GetStudiesMeetings
@@ -2964,7 +3073,7 @@ CREATE FUNCTION getOwnedStudies(@client_id int)
 Umożliwia wyświetlenie zakupionych spotkań ze studiów przez klienta
 
 ```sql
-CREATE FUNCTION getOwnedStudeisMeetings(@client_id int)
+CREATE FUNCTION getOwnedStudiesMeetings(@client_id int)
     RETURNS table
         AS RETURN
         SELECT meeting_topic
