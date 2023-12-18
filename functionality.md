@@ -2628,7 +2628,7 @@ CREATE FUNCTION coursesPresence(@participant_id int, @product_id int)
 	RETURNS FLOAT
 AS
 BEGIN
-	DECLARE @presence int
+	DECLARE @presence float
 	SET @presence = ISNULL((SELECT COUNT(ma.presence)
 				FROM ModulesAttendance as ma
 					inner join Modules as m
