@@ -605,9 +605,11 @@ create table Studies
             unique
         constraint check_name
             check (len([name]) >= 5),
-    participants_limit int                               not null
+    participants_limit int default 100                   not null
         constraint check_praticipant_limit
-            check ([participants_limit] >= 10),
+            check ([participants_limit] >= 10)
+        constraint check_praticipant_limit
+            check ([participants_limit] >= 10 AND [participants_limit] <= 300),
     full_price         money
         constraint df_studies_full_price default 7000.00 not null
         constraint check_full_price
@@ -622,6 +624,7 @@ go
 exec sp_addextendedproperty 'MS_Description', 'Studies name should be at least 5 characters long', 'SCHEMA', 'dbo',
      'TABLE', 'Studies', 'CONSTRAINT', 'check_name'
 go
+
 ```
 
 #### StudiesParticipants
@@ -651,16 +654,20 @@ Zawiera przypisane studiom egzaminy, datę odbycia się egzaminów  oraz maksyma
 ```sql
 create table Exams
 (
-    exam_id        int  not null,
-    participant_id int  not null
-        constraint Exams_StudiesParticipants
-            references StudiesParticipants,
-    date           date not null,
-    points         int,
-    constraint Exams_pk
-        primary key (exam_id, participant_id)
+    exam_id    int identity
+        constraint PK_Exams
+            primary key,
+    studies_id int                    not null
+        constraint Exams_Studies
+            references Studies
+            on update cascade on delete cascade,
+    date       date default getdate() not null,
+    max_points int  default 100       not null
+        constraint check_max_points
+            check ([max_points] > 0 AND [max_points] < 200)
 )
 go
+
 ```
 
 #### ExamsTaken
@@ -668,16 +675,16 @@ Zawiera dane odnośnie wyników egzaminów w których uczestnik studiów wziął
 ```sql
 create table ExamsTaken
 (
-    exam_id        int not null
+    exam_id        int            not null
         constraint ExamsTaken_Exams
             references Exams
             on update cascade
         constraint check_date
             check ([dbo].[checkExamDate]([exam_id]) <= getdate()),
-    participant_id int not null
+    participant_id int            not null
         constraint ExamsTaken_StudiesParticipants
             references StudiesParticipants,
-    points         int not null,
+    points         int default 50 not null,
     constraint ExamsTaken_pk
         primary key (participant_id, exam_id),
     constraint check_points
@@ -696,16 +703,14 @@ Zawiera uczestników, którzy odbyli praktyki w określonym terminie
 ```sql
 create table Apprenticeship
 (
-    participant_id      int   not null
+    participant_id      int               not null
         constraint Apprenticeship_StudiesParticipants
             references StudiesParticipants
             on update cascade on delete cascade,
-    date                date  not null,
-    presence_percentage float not null
+    date                date              not null,
+    presence_percentage float default 100 not null
         constraint check_presence_percentage
-            check ([presence_percentage] >= 0 AND [presence_percentage] <= 100),
-    constraint participant_id
-        primary key (participant_id, date)
+            check ([presence_percentage] >= 0 AND [presence_percentage] <= 100)
 )
 go
 ```
@@ -725,7 +730,7 @@ create table StudiesMeetingParticipants
         constraint MeetingParticipants_StudiesParticipants
             references StudiesParticipants
             on update cascade on delete cascade,
-    presence       bit,
+    presence       bit default 0,
     constraint meeting_id
         primary key (meeting_id, participant_id)
 )
@@ -750,11 +755,11 @@ create table StudiesMeetings
         constraint StudiesMeetings_Studies
             references Studies,
     date                    date                             not null,
-    type_id                 int                              not null
+    type_id                 int default 1                    not null
         constraint StudiesMeetings_MeetingType
             references MeetingType
             on update cascade on delete cascade,
-    participants_limit      int                              not null,
+    participants_limit      int default 300                  not null,
     student_price           money
         constraint df_student_price default 60.00            not null
         constraint check_student_price
