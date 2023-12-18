@@ -934,21 +934,31 @@ Raport dotyczący frekwencji na danym wydarzeniu (moduł, spotkanie ze studiów)
 ```sql
 CREATE VIEW PastEventsAttendance
 AS
-SELECT pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, sm.type_id as type, COUNT(mp.presence) as attendance
+SELECT pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, mt.type_name as type, COUNT(mp.client_id) as attendance
 FROM StudiesMeetings as sm
-	inner join MeetingParticipants as mp on sm.meeting_id=mp.meeting_id and mp.presence=1
+	inner join (SELECT participant_id as client_id, meeting_id
+				FROM StudiesMeetingParticipants
+				WHERE presence=1
+				UNION
+				SELECT client_id, meeting_id
+				FROM OuterMeetingParticipants
+				WHERE presence = 1) as mp
+				on mp.client_id=sm.meeting_id
 	inner join Studies as s on s.product_id=sm.studies_id and sm.date <= GETDATE()
 	inner join Products as p on p.product_id=s.product_id
+	join MeetingType as mt on mt.type_id=sm.type_id
 	join ProductType as pt on pt.product_type_id=p.product_type_id
-GROUP BY pt.product_type_name, s.name, sm.meeting_id, sm.date, sm.type_id
+GROUP BY pt.product_type_name, s.name, sm.meeting_id, sm.date, mt.type_name
 UNION
-SELECT pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, m.module_id as type, COUNT(ma.presence) as attendance
+SELECT pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, mt.type_name  as type, COUNT(ma.presence) as attendance
 FROM Modules as m
 	inner join ModulesAttendance as ma on m.module_id=ma.module_id and ma.presence=1
 	inner join Courses as c on c.product_id=m.product_id and m.end_date <= GETDATE()
 	inner join Products as p on p.product_id=c.product_id
+	join MeetingType as mt on mt.type_id=m.module_type
 	join ProductType as pt on pt.product_type_id=p.product_type_id
-GROUP BY pt.product_type_name, c.course_name, m.module_id, m.start_date, m.module_id
+GROUP BY pt.product_type_name, c.course_name, m.module_id, m.start_date, mt.type_name
+GO
 ```
 
 #### EventsThisMonth
