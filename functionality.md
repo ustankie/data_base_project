@@ -1461,26 +1461,20 @@ Dodaje spotkanie o podanej nazwie, id nauczyciela, nazwie języka oraz opcjonaln
 
 
 ```sql
-CREATE PROCEDURE [dbo].[uspAddStudies] 
+CREATE PROCEDURE [dbo].[uspAddStudiesMeetings] 
 	@language_name nvarchar(50),
 	@academic_id int,
 	@interpreter_id int=null,
 	@translated_to_name nvarchar(50)=null,
-	@name nvarchar(50),
-	@participants_limit int
+	@participants_limit int,
+	@type_name nvarchar(50),
+	@date date,
+	@studies_name nvarchar(50),
+	@meeting_topic nvarchar(50)
 AS
 BEGIN
 	SET NOCOUNT ON;
 	BEGIN TRY
-		IF EXISTS(
-			SELECT *
-			FROM Studies
-			where @name=name
-		)
-		BEGIN
-			;
-			THROW 52000, N'Studia o tej nazwie już istnieją',1 
-		END
 		IF NOT EXISTS(
 			SELECT *
 			FROM Academics
@@ -1517,11 +1511,45 @@ BEGIN
 			;
 			THROW 52000, N'Nie ma takiego tłumacza!',1 
 		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM MeetingType
+			WHERE type_name=@type_name
+		) 
+		BEGIN
+			;
+			THROW 52000, N'Nie ma takiich studiów!',1 
+		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM Studies
+			WHERE name=@studies_name
+		) 
+		BEGIN
+			;
+			THROW 52000, N'Nie ma takiego typu spotkania!',1 
+		END
+
+		if @meeting_topic IS NULL
+            BEGIN
+                ;
+                THROW 52000, N'Temat spotkania nie może być pusty!',1
+            END
+
+		DECLARE @studies_id INT
+		SELECT @studies_id = product_id
+		FROM Studies
+		WHERE name=@studies_name
+
+		DECLARE @type_meeting_id INT
+		SELECT  @type_meeting_id = type_id
+		FROM MeetingType
+		WHERE type_name=@type_name
 
 		DECLARE @type_id INT
 		SELECT @type_id = product_type_id
 		FROM ProductType
-		WHERE 'studies' = product_type_name
+		WHERE 'meeting' = product_type_name
 
 		DECLARE @language_id INT
 		SELECT @language_id=language_id
@@ -1541,8 +1569,8 @@ BEGIN
 		DECLARE @product_id INT;
 		SET  @product_id= SCOPE_IDENTITY();
 
-		INSERT INTO Studies(product_id,name,participants_limit)
-		Values (@product_id,@name,@participants_limit);
+		INSERT INTO StudiesMeetings(meeting_id,studies_id,date,type_id,participants_limit, meeting_topic)
+		Values (@product_id,@studies_id,@date,@type_meeting_id,@participants_limit, @meeting_topic);
 
 		
 	END TRY
@@ -1551,6 +1579,9 @@ BEGIN
 		THROW 52000, @msg, 1;
 	END CATCH
 END
+go
+
+
 
 ```
 
@@ -1967,7 +1998,8 @@ Dla podanego uczestnika studiów dodaje datę odbycia przez niego praktyk do tab
 ```sql
 CREATE PROCEDURE [dbo].[uspAddApprenticeship]
 	@date date,
-	@participant_id int
+	@participant_id int,
+	@presence_percent float
 AS
 BEGIN
 
@@ -1991,8 +2023,14 @@ BEGIN
 			THROW 52000, N'Wprowadzenie praktyk o dacie przyszłej niemożliwe',1 
 		END
 
-		INSERT INTO Apprenticeship(participant_id,date)
-		values(@participant_id,@date)
+		IF @presence_percent NOT BETWEEN 0.0 AND 100.0
+        Begin
+            ;
+            THROW 52000, N'Procent obecności musi być w przedziale 0..100%',1
+        END
+
+		INSERT INTO Apprenticeship(participant_id,date,presence_percentage)
+		values(@participant_id,@date, @presence_percent)
 
 
 	END TRY
@@ -2639,4 +2677,279 @@ CREATE FUNCTION clientCourses(@client_id int)
 		inner join Courses as c on c.product_id=od.product_id
 		inner join Statuses as s on s.status_id=o.payment_status
 		WHERE o.client_id=@client_id
+```
+
+# Studia
+
+### StudiesPresence
+
+Sprawdzenie obecności danego uczestnika studiów
+
+```sql
+CREATE FUNCTION studiesPresence(@participant_id int)
+    RETURNS float
+AS
+    BEGIN
+        DECLARE @meetingsCount int
+        SET @meetingsCount = ISNULL((SELECT COUNT(*)
+                                  FROM StudiesMeetings
+                                    INNER JOIN StudiesMeetingParticipants ON StudiesMeetings.meeting_id = StudiesMeetingParticipants.meeting_id
+                                  WHERE date < GETDATE() AND participant_id = @participant_id), 0)
+        IF @meetingsCount = 0 BEGIN
+           RETURN null
+        END
+
+        DECLARE @attendedMeetings int
+        SET @attendedMeetings = ISNULL((SELECT COUNT(*)
+                                       FROM StudiesMeetings
+                                           INNER JOIN StudiesMeetingParticipants ON StudiesMeetings.meeting_id = StudiesMeetingParticipants.meeting_id
+                                           
+                                       WHERE
+                                           date < GETDATE() AND
+                                           presence = 1 AND
+                                           participant_id = @participant_id), 0)
+
+        RETURN CAST(@attendedMeetings AS float)/@meetingsCount * 100.0
+    END
+go
+```
+
+### GetExamScores
+Umożliwia wyświetlenie punktów i wyniku procentowego z egzaminów w których uczestnik studiów brał udział (dla wszystkich studiów na które dany klient zostął zapisany)
+
+```sql
+CREATE FUNCTION getExamScores(@student_id int)
+    RETURNS table
+AS
+    RETURN
+        SELECT name, date, points, CAST(points AS float)/max_points*100 AS percentScore
+        FROM ExamsTaken
+            INNER JOIN Exams ON ExamsTaken.exam_id = Exams.exam_id
+            INNER JOIN dbo.Studies S on Exams.studies_id = S.product_id
+        WHERE participant_id = @student_id
+```
+
+### GetStudiesMeetings
+Umożliwia wyświetlenie wszystkich zaplanowanych spotkań na studiach
+```sql
+CREATE FUNCTION getStudiesMeetings(@studies_id int)
+    RETURNS table
+AS RETURN 
+        SELECT meeting_topic, date, participants_limit
+        FROM StudiesMeetings
+        WHERE studies_id = @studies_id
+        ORDER BY date
+```
+
+### GetRegisteredApprenticeship
+Umożliwia wyświetlenie praktyk danego uczestnika studiów
+```sql
+CREATE FUNCTION getRegisteredApprenticeship(@participant_id int)
+    RETURNS table
+AS RETURN
+        SELECT name, Apprenticeship.*
+        FROM Apprenticeship
+            INNER JOIN StudiesParticipants ON Apprenticeship.participant_id = StudiesParticipants.participant_id
+            INNER JOIN Studies ON StudiesParticipants.product_id = Studies.product_id
+        WHERE Apprenticeship.participant_id = @participant_id
+```
+
+### CheckApprenticeshipStatus
+Umożliwia sprawdzenie czy dany uczestnik studiów ma zaliczone praktyki
+```sql
+CREATE FUNCTION checkApprenticeshipStatus(@participant_id int)
+    RETURNS bit
+AS
+    BEGIN
+        DECLARE @acceptedApprenticeshipStatus int
+        SET @acceptedApprenticeshipStatus = ISNULL((SELECT COUNT(*)
+                                            FROM Apprenticeship
+                                            WHERE presence_percentage = 100 AND participant_id = @participant_id), 0)
+        IF @acceptedApprenticeshipStatus >= 2
+           RETURN 1
+
+        RETURN 0
+    END
+go
+```
+
+# Nauczyciel
+
+### GetTaughtWebinars
+Umożliwia wyświetlenie prowadzonych przez nauczyciela webinarów
+```sql
+
+CREATE FUNCTION getTaughtWebinars(@academic_id int)
+    RETURNS table
+AS RETURN
+    SELECT webinar_name, Webinars.product_id
+    FROM Products
+        INNER JOIN Webinars ON Products.product_id = Webinars.product_id
+    WHERE academic_id = @academic_id
+
+```
+
+### GetTaughtWebinars
+Umożliwia wyświetlenie prowadzonych przez nauczyciela kurśów
+```sql
+
+CREATE FUNCTION getTaughtCurses(@academic_id int)
+    RETURNS table
+AS RETURN
+    SELECT course_name, Courses.product_id
+    FROM Products
+        INNER JOIN Courses ON Products.product_id = Courses.product_id
+    WHERE academic_id = @academic_id
+		
+```
+
+### GetTaughtMeetings
+Umożliwia wyświetlenie prowadzonych przez nauczyciela kurśów
+```sql
+
+CREATE FUNCTION getTaughtStudiesMeetings(@academic_id int)
+    RETURNS table
+AS RETURN
+    SELECT meeting_topic, meeting_id
+    FROM Products
+        INNER JOIN StudiesMeetings ON Products.product_id = StudiesMeetings.meeting_id
+    WHERE academic_id = @academic_id
+		
+```
+
+### GetTaughtStudies
+Umożliwia wyświetlenie prowadzonych przez nauczyciela kurśów
+```sql
+CREATE FUNCTION getTaughtStudies(@academic_id int)
+    RETURNS table
+AS RETURN
+    SELECT name, Studies.product_id
+    FROM Products
+        INNER JOIN Studies ON Products.product_id = Studies.product_id
+    WHERE academic_id = @academic_id
+		
+```
+
+
+### GetStudiesMeetingAttendanceList
+Umożliwia wyswietlenie listy obecności na danym spotkaniu na studiach
+```sql
+CREATE FUNCTION getStudiesMeetingAttendanceList(@meeting_id int)
+    RETURNS table
+AS RETURN
+    SELECT StudiesMeetingParticipants.participant_id, U.last_name, U.first_name
+    FROM StudiesMeetingParticipants
+        INNER JOIN dbo.StudiesMeetings SM on StudiesMeetingParticipants.meeting_id = SM.meeting_id
+        INNER JOIN StudiesParticipants SP on StudiesMeetingParticipants.participant_id = SP.participant_id
+        INNER JOIN Clients C on SP.client_id = C.client_id
+        INNER JOIN Users U on C.client_id = U.user_id
+    WHERE SM.meeting_id = @meeting_id
+go
+```
+
+### GetCourseModuleAttendanceList
+Umożli
+```sql
+CREATE FUNCTION getCourseModuleAttendanceList(@module_id int)
+    RETURNS table
+AS RETURN
+    SELECT ModulesAttendance.participant_id, last_name, first_name
+    FROM ModulesAttendance
+        INNER JOIN CoursesParticipants CP ON ModulesAttendance.participant_id = CP.participant_id
+        INNER JOIN dbo.Clients C on C.client_id = CP.client_id
+        INNER JOIN Users U on C.client_id = U.user_id
+    WHERE module_id = @module_id
+```
+
+# Klient
+
+### GetOwnedWebinars
+Umożliwia wyświetlenie zakupionych webinarów przez klienta
+```sql
+CREATE FUNCTION getOwnedWebinars(@client_id int)
+    RETURNS table
+AS RETURN
+    SELECT webinar_name
+    FROM Webinars
+        INNER JOIN Products ON Webinars.product_id = Products.product_id
+        INNER JOIN Order_details ON Products.product_id = Order_details.product_id
+        INNER JOIN Orders ON Order_details.order_id = Orders.order_id
+        INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
+    WHERE status_name = 'paid' AND client_id = @client_id
+```
+### GetOwnedStudies
+Umożliwia wyświetlenie zakupionych studiów przez klienta
+
+```sql
+
+CREATE FUNCTION getOwnedStudies(@client_id int)
+    RETURNS table
+        AS RETURN
+        SELECT name
+        FROM Studies
+                 INNER JOIN Products ON Studies.product_id = Products.product_id
+                 INNER JOIN Order_details ON Products.product_id = Order_details.product_id
+                 INNER JOIN Orders ON Order_details.order_id = Orders.order_id
+                 INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
+        WHERE status_name = 'paid' AND client_id = @client_id
+```
+### GetOwnedStudeisMeetings
+Umożliwia wyświetlenie zakupionych spotkań ze studiów przez klienta
+
+```sql
+CREATE FUNCTION getOwnedStudeisMeetings(@client_id int)
+    RETURNS table
+        AS RETURN
+        SELECT meeting_topic
+        FROM StudiesMeetings
+                 INNER JOIN Products ON StudiesMeetings.meeting_id = Products.product_id
+                 INNER JOIN Order_details ON Products.product_id = Order_details.product_id
+                 INNER JOIN Orders ON Order_details.order_id = Orders.order_id
+                 INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
+        WHERE status_name = 'paid' AND client_id = @client_id
+```
+### GetOwnedCourses
+Umożliwia wyświetlenie zakupionych kursów przez klienta
+```sql
+CREATE FUNCTION getOwnedCourses(@client_id int)
+    RETURNS table
+        AS RETURN
+        SELECT course_name
+        FROM Courses
+                 INNER JOIN Products ON Courses.product_id = Products.product_id
+                 INNER JOIN Order_details ON Products.product_id = Order_details.product_id
+                 INNER JOIN Orders ON Order_details.order_id = Orders.order_id
+                 INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
+        WHERE status_name = 'paid' AND client_id = @client_id
+```
+
+### GetBucket
+Pozwala wyświetlić zawartość koszyka klientów
+```sql
+CREATE FUNCTION getBucket(@client_id int)
+    RETURNS table
+AS RETURN
+    SELECT Products.product_id, Products.product_type_id, Payments.price
+    FROM Products
+        INNER JOIN Order_details ON Products.product_id = Order_details.product_id
+        INNER JOIN Orders ON Order_details.order_id = Orders.order_id
+        INNER JOIN Payments ON Orders.order_id = Payments.order_id
+        INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
+    WHERE status_name = 'not_paid' AND client_id = @client_id
+go
+```
+
+### GetPaymentHistory
+Umożliwia wyświetlenie historii płatności danego klienta
+
+```sql
+CREATE FUNCTION getPaymentHistory(@client_id int)
+    RETURNS table
+AS RETURN
+    SELECT payment_date, price, Orders.order_id
+    FROM Payments
+        INNER JOIN Orders ON Payments.order_id = Orders.order_id
+        INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
+    WHERE status_name = 'paid' AND client_id = @client_id
+go
 ```
