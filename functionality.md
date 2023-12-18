@@ -2579,6 +2579,37 @@ END
 
 ## Funkcje
 
+### Sekretarz
+
+#### ClientsExams
+
+Lista wyników egzaminów dla danego klienta
+
+```sql
+CREATE clientsExam(@participant_id int)
+	RETURNS table
+		AS
+		RETURN Select e.studies_id, et.exam_id, et.points
+		FROM Exams as e
+		inner join ExamsTaken as et on et.exam_id=e.exam_id and et.participant_id = @participant_id
+```
+
+#### ClientsApprenciships
+
+Liczba odbytych praktyk przez danego klienta
+
+```sql
+CREATE FUNCTION clientsApprenticeships(@participant_id int)
+	RETURNS int
+AS
+BEGIN
+	RETURN ( SELECT COUNT(date) FROM Apprenticeship
+	Where participant_id = @participant_id
+	Group By participant_id)
+END
+```
+
+
 ### Kursy
 
 #### CoursePass
