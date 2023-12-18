@@ -2656,7 +2656,7 @@ BEGIN
 						From Courses as c
 						Where c.product_id = @product_id), 0)
 	DECLARE @occupied INT
-	SET @occupied = ISNULL((SELECT SUM(cp.participant_id)
+	SET @occupied = ISNULL((SELECT COUNT(cp.participant_id)
 					From CoursesParticipants as cp
 					WHERE cp.product_id = @product_id
 					GROUP BY cp.product_id),0)
