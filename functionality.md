@@ -158,8 +158,6 @@ create table Users
         constraint email_unique
             unique
         constraint ValidEmail
-            check ([Email] like '%@%')
-        constraint ValidEmail
             check ([Email] like '%_@__%.__%')
 )
 go
@@ -2874,6 +2872,37 @@ go
 
 ```
 
+####
+Pozwala sprawdzić czy do listy uczestników spotkania na studiach można dopisać więcej osób
+```sql
+CREATE FUNCTION checkIfStudiesMeetingParticipantsAllowed(@meeting_id int)
+    RETURNS bit
+AS
+    BEGIN
+        DECLARE @outer_participant_count int
+        DECLARE @studies_participant_count int
+        DECLARE @participant_limit int
+
+        SET @studies_participant_count = ISNULL((SELECT COUNT(*)
+                                                 FROM StudiesMeetingParticipants
+                                                 WHERE meeting_id = @meeting_id
+                                                 GROUP BY meeting_id), 0)
+        SET @outer_participant_count = ISNULL((SELECT COUNT(*)
+                                               FROM OuterMeetingParticipants
+                                               WHERE meeting_id = @meeting_id
+                                               GROUP BY meeting_id), 0)
+        SET @participant_limit = ISNULL((SELECT participants_limit
+                                         FROM StudiesMeetings
+                                         WHERE meeting_id = @meeting_id), 0)
+
+
+        IF @studies_participant_count + @outer_participant_count > @participant_limit BEGIN
+            RETURN 0
+        END
+        RETURN 1
+    END
+```
+
 ### Nauczyciel
 
 #### GetTaughtWebinars
@@ -3003,7 +3032,7 @@ CREATE FUNCTION getOwnedStudies(@client_id int)
                  INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
         WHERE status_name = 'paid' AND client_id = @client_id
 ```
-#### GetOwnedStudeisMeetings
+#### GetOwnedStudiesMeetings
 Umożliwia wyświetlenie zakupionych spotkań ze studiów przez klienta
 
 ```sql
@@ -3039,14 +3068,16 @@ Pozwala wyświetlić zawartość koszyka klientów
 CREATE FUNCTION getBucket(@client_id int)
     RETURNS table
 AS RETURN
-    SELECT Products.product_id, Products.product_type_id, Payments.price
+    SELECT dbo.getProductName(Products.product_id) AS product_name, product_type_name, Payments.price
     FROM Products
         INNER JOIN Order_details ON Products.product_id = Order_details.product_id
         INNER JOIN Orders ON Order_details.order_id = Orders.order_id
+        INNER JOIN ProductType ON Products.product_type_id = ProductType.product_type_id
         INNER JOIN Payments ON Orders.order_id = Payments.order_id
         INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
     WHERE status_name = 'not_paid' AND client_id = @client_id
 go
+
 ```
 
 #### GetPaymentHistory
@@ -3065,6 +3096,61 @@ go
 ```
 
 ## Triggery
+
+### Studia
+
+#### checkStudiesMeetingLimit
+Przy dodawaniu nowych uczestników spotkań sprawdza czy nie został przekroczony limit miejsc na spotkaniu na studiach podczas wpisywania do 
+tabeli `StudiesMeetingParticipants` lub `OuterMeetingParticipants`
+```sql
+CREATE TRIGGER checkStudiesMeetingLimit_studiesParticipants_trg
+ON StudiesMeetingParticipants
+AFTER INSERT
+AS
+    BEGIN
+        SET NOCOUNT ON
+        DECLARE @meeting_id int
+        DECLARE curs CURSOR FOR
+            (SELECT meeting_id FROM inserted)
+
+        OPEN curs
+
+        FETCH NEXT FROM curs INTO @meeting_id
+        WHILE @@FETCH_STATUS = 0 BEGIN
+            IF NOT dbo.checkIfStudiesMeetingParticipantsAllowed(@meeting_id) = 1 BEGIN
+                RAISERROR(N'Studies Meetings participants limit exceeded', 12, 1)
+            END
+
+            FETCH NEXT FROM curs INTO @meeting_id
+        END
+        CLOSE curs
+        DEALLOCATE curs
+    END
+
+CREATE TRIGGER checkStudiesMeetingLimit_outerParticipants_trg
+ON OuterMeetingParticipants
+AFTER INSERT
+AS
+    BEGIN
+        SET NOCOUNT ON
+        DECLARE @meeting_id int
+        DECLARE curs CURSOR FOR
+            (SELECT meeting_id FROM inserted)
+
+        OPEN curs
+
+        FETCH NEXT FROM curs INTO @meeting_id
+        WHILE @@FETCH_STATUS = 0 BEGIN
+            IF NOT dbo.checkIfStudiesMeetingParticipantsAllowed(@meeting_id) = 1 BEGIN
+                RAISERROR(N'Studies Meetings participants limit exceeded', 12, 1)
+            END
+
+            FETCH NEXT FROM curs INTO @meeting_id
+        END
+        CLOSE curs
+        DEALLOCATE curs
+    END
+```
 
 ## Dane testowe
 
