@@ -140,20 +140,27 @@ Zawiera wszystkich użytkowników systemu oraz ich dane - imię, nazwisko, dane 
 ```sql
 create table Users
 (
-    user_id            int                                  not null
+    user_id        int identity
         constraint user_id
             primary key,
-    first_name         nvarchar(50)                         not null,
-    last_name          nvarchar(50)                         not null,
-    zip_code           nvarchar(10)                         not null,
-    city               nvarchar(50)                         not null,
-    street_address     nvarchar(50)                         not null,
-    country            nchar(50)                            not null,
-    can_pay_days_later int
-        constraint DF__Users__can_pay_d__719CDDE7 default 0 not null,
-    user_type          int                                  not null
+    first_name     nvarchar(50)           not null,
+    last_name      nvarchar(50)           not null,
+    zip_code       nvarchar(10)           not null,
+    city           nvarchar(50)           not null,
+    street_address nvarchar(50)           not null,
+    country        nvarchar(50)           not null,
+    user_type      int
+        constraint df_user_type default 1 not null
         constraint User_types_Users
             references User_types
+            on update cascade on delete cascade,
+    email          nvarchar(50)           not null
+        constraint email_unique
+            unique
+        constraint ValidEmail
+            check ([Email] like '%@%')
+        constraint ValidEmail
+            check ([Email] like '%_@__%.__%')
 )
 go
 ```
@@ -170,6 +177,7 @@ create table Academics
             primary key
         constraint FK_Academics_Users
             references Users
+            on update cascade on delete cascade
 )
 go
 ```
@@ -186,6 +194,7 @@ create table Interpreters
             primary key
         constraint Interpreters_Users
             references Users
+            on update cascade on delete cascade
 )
 go
 
@@ -198,11 +207,13 @@ Zawiera id wszystkich klientów
 ```sql
 create table Clients
 (
-    client_id int not null
+    client_id          int                         not null
         constraint client_id
             primary key
         constraint Clients_Users
-            references Users
+            references Users,
+    can_pay_days_later int
+        constraint df_Can_pay_days_later default 0 not null
 )
 go
 ```
@@ -214,7 +225,7 @@ Zawiera listę wszystkich typów użytkowników występujących w systemie
 ```sql
 create table User_types
 (
-    user_type int          not null
+    user_type int identity
         constraint User_types_pk
             primary key,
     type_name nvarchar(50) not null
@@ -231,9 +242,12 @@ create table Interpreted_languages
 (
     interpreter_id int not null
         constraint Interpreted_languages_Interpreters
-            references Interpreters,
+            references Interpreters
+            on update cascade on delete cascade,
     translate_from int not null
         constraint FK_Interpreted_languages_Languages
+            references Languages
+        constraint FK_Interpreted_languages_Languages2
             references Languages,
     translate_to   int not null
         constraint FK_Interpreted_languages_Languages1
@@ -242,6 +256,7 @@ create table Interpreted_languages
         primary key (interpreter_id, translate_from, translate_to)
 )
 go
+
 ```
 
 #### Languages
@@ -251,10 +266,12 @@ Lista wszystkich języków, w jakich prowadzone są szkolenia, bądź na jakie s
 ```sql
 create table Languages
 (
-    language_id   int          not null
+    language_id   int identity
         constraint PK_Languages
             primary key,
     language_name nvarchar(50) not null
+        constraint language_name_unique
+            unique
 )
 go
 ```
@@ -266,18 +283,20 @@ Zawiera wszystkie produkty, informację o ich typie (odwołanie do tabeli Produc
 ```sql
 create table Products
 (
-    product_id      int not null
+    product_id      int identity
         constraint Products_pk
             primary key,
     product_type_id int not null
         constraint Products_ProductType
-            references ProductType,
+            references ProductType
+            on update cascade on delete cascade,
     language        int not null
         constraint FK_Products_Languages
             references Languages,
     academic_id     int not null
         constraint FK_Products_Academics
-            references Academics,
+            references Academics
+            on update cascade on delete cascade,
     interpreter_id  int
         constraint FK_Products_Interpreters1
             references Interpreters,
@@ -295,7 +314,7 @@ Zawiera wszystkie typy produktów (webinary, spotkania, kursy, studia)
 ```sql
 create table ProductType
 (
-    procduct_type_id  int          not null
+    product_type_id   int identity
         constraint ProductType_pk
             primary key,
     product_type_name nvarchar(50) not null
@@ -310,14 +329,18 @@ Spis wszystkich płatności (numer zamówienia, data płatności, wpłacona kwot
 ```sql
 create table Payments
 (
-    payment_id   int   not null
+    payment_id   int identity
         constraint Payments_pk
             primary key,
-    order_id     int   not null
-	constraint Payments_Orders
+    order_id     int                               not null
+        constraint Orders_Payments
             references Orders,
-    payment_date date  not null,
-    price        money not null
+    payment_date date                              not null
+        constraint payment_date_check
+            check ([payment_date] >= '1990-01-01' AND [payment_date] <= getdate()),
+    price        money                             not null,
+    cancelled    bit
+        constraint DF_Payments_cancelled default 0 not null
 )
 go
 ```
@@ -329,7 +352,7 @@ Rodzaje spotkań (online, hybrydowe, stacjonarne)
 ```sql
 create table MeetingType
 (
-    type_id   int          not null
+    type_id   int identity
         constraint type_id
             primary key,
     type_name nvarchar(50) not null
@@ -342,11 +365,18 @@ go
 Lista wszystkich zamówień (numer klienta, status płatności)
 
 ```sql
-CREATE TABLE Orders (
-    order_id int  NOT NULL,
-    client_id int  NOT NULL,
-    payment_status int  NOT NULL,
-    	CONSTRAINT Orders_pk PRIMARY KEY  (order_id)
+create table Orders
+(
+    order_id       int identity
+        constraint Orders_pk
+            primary key,
+    client_id      int                         not null
+        constraint Orders_Clients
+            references Clients,
+    payment_status int
+        constraint df_payment_status default 2 not null
+        constraint Statuses_Orders
+            references Statuses
 )
 go
 ```
@@ -356,12 +386,18 @@ go
 Lista wszystkich zamówień (numer klienta, status płatności)
 
 ```sql
-create table Order_details (
-    order_id int  NOT NULL,
-    product_id int  NOT NULL,
-    is_advance bit  NOT NULL,
-    	CONSTRAINT Order_details_pk
-		PRIMARY KEY  (order_id,product_id)
+create table Order_details
+(
+    order_id   int                                       not null
+        constraint Order_products_Orders
+            references Orders,
+    product_id int                                       not null
+        constraint Order_products_Products
+            references Products,
+    is_advance bit
+        constraint DF_Order_details_is_advance default 0 not null,
+    constraint Order_details_pk
+        primary key (order_id, product_id)
 )
 go
 ```
@@ -370,11 +406,12 @@ go
 Rodzaje statusów zamówień ( nieopłacone, opłacone, częsciowo opłacone (z jakiegos produktu tylko zaliczka), anulowane )
 
 ```sql
-CREATE TABLE Statuses (
-    status_id int  NOT NULL,
-    status_name varchar(20)  NOT NULL,
-    	CONSTRAINT Statuses_pk
-		PRIMARY KEY  (status_id)
+create table Statuses
+(
+    status_id   int identity
+        constraint Statuses_pk
+            primary key,
+    status_name varchar(20) not null
 )
 go
 
@@ -390,14 +427,20 @@ Lista wszystkich webinarów wraz z ich nazwami, datą publikacji i ceną
 ```sql
 create table Webinars
 (
-    product_id   int          not null
+    product_id   int                      not null
         constraint product_id_webinars
             primary key
         constraint Webinars_Products
-            references Products,
-    webinar_name nvarchar(50) not null,
-    posted_date  date         not null,
+            references Products
+            on update cascade on delete cascade,
+    webinar_name nvarchar(50)             not null
+        constraint webinar_name_unique
+            unique,
+    posted_date  date                     not null
+        constraint check_posted_date
+            check ([posted_date] >= '1990-01-01' AND [posted_date] <= getdate()),
     price        money
+        constraint def_price default 0.00 not null
 )
 go
 
@@ -412,10 +455,12 @@ create table WebinarParticipants
 (
     product_id int not null
         constraint WebinarParticipants_Webinars
-            references Webinars,
+            references Webinars
+            on update cascade on delete cascade,
     client_id  int not null
         constraint FK_WebinarParticipants_Clients
-            references Clients,
+            references Clients
+            on update cascade on delete cascade,
     constraint WebinarParticipants_pk
         primary key (client_id, product_id)
 )
@@ -431,17 +476,26 @@ Lista kursów wraz z ich nazwami, datami początku i końca kursu, limitem uczes
 ```sql
 create table Courses
 (
-    product_id         int          not null
+    product_id         int                        not null
         constraint product_id
             primary key
         constraint FK_Courses_Products
-            references Products,
-    course_name        nvarchar(50) not null,
-    start_date         date         not null,
-    end_date           date         not null,
-    participants_limit int          not null,
-    advance_price      money        not null,
-    full_price         money        not null
+            references Products
+            on update cascade on delete cascade,
+    course_name        nvarchar(50)               not null
+        constraint course_name_unique
+            unique,
+    start_date         date                       not null,
+    end_date           date                       not null,
+    participants_limit int                        not null,
+    advance_price      money
+        constraint df_advance_price default 50.00 not null,
+    full_price         money
+        constraint df_full_price default 400.00   not null,
+    constraint ch_advance_price
+        check ([advance_price] < [full_price]),
+    constraint ch_end_date
+        check ([end_date] >= [start_date])
 )
 go
 
@@ -454,17 +508,19 @@ Lista uczestników poszczególnych kursów
 ```sql
 create table CoursesParticipants
 (
-    participant_id int not null
+    participant_id int identity
         constraint CoursesParticipants_pk
             primary key,
     client_id      int not null
         constraint CursesParticipants_Clients
-            references Clients,
+            references Clients
+            on update cascade on delete cascade,
     product_id     int not null
         constraint CoursesParticipants_Courses
             references Courses
 )
 go
+
 ```
 
 
@@ -475,21 +531,30 @@ Lista modułów kursów z nazwami, typem modułu (odwołanie do tabeli MeetingTy
 ```sql
 create table Modules
 (
-    module_id   int         not null
+    module_id   int identity
         constraint Modules_pk
             primary key,
     product_id  int         not null
         constraint Courses_Modules
-            references Courses,
+            references Courses
+            on update cascade on delete cascade,
     module_name varchar(50) not null,
     module_type int         not null
         constraint Modules_MeetingType
-            references MeetingType,
+            references MeetingType
+            on update cascade on delete cascade,
     classroom   int,
     start_date  date        not null,
-    end_date    date        not null
+    end_date    date        not null,
+    constraint ch_end_date_courses
+        check ([end_date] >= [start_date])
 )
 go
+
+create unique index Uniq_Modules
+    on Modules (module_name)
+go
+
 ```
 
 #### ModulesAttendance
@@ -499,13 +564,16 @@ Zawiera listę obecności uczestników kursów na poszczególnych modułach
 ```sql
 create table ModulesAttendance
 (
-    participant_id int not null
+    participant_id int                                     not null
         constraint FK_ModulesAttendance_CoursesParticipants
-            references CoursesParticipants,
-    module_id      int not null
+            references CoursesParticipants
+            on update cascade on delete cascade,
+    module_id      int                                     not null
         constraint ModulesAttendance_Modules
-            references Modules,
-    presence       bit not null,
+            references Modules
+            on update cascade on delete cascade,
+    presence       bit
+        constraint DF_ModulesAttendance_presence default 0 not null,
     constraint PK_ModulesAttendance
         primary key (participant_id, module_id)
 )
@@ -522,16 +590,33 @@ Zawiera listę produktów typu "studia", nazwę studiów, limit uczestników ora
 ```sql
 create table Studies
 (
-    product_id         int          not null
+    product_id         int                               not null
         constraint studies_id
             primary key
         constraint Studies_Products
-            references Products,
-    name               nvarchar(50) not null,
-    participants_limit int          not null,
-    advance_price      money        not null,
-    full_price         money        not null,
+            references Products
+            on update cascade on delete cascade,
+    name               nvarchar(50)                      not null
+        constraint studies_name_unique
+            unique
+        constraint check_name
+            check (len([name]) >= 5),
+    participants_limit int                               not null
+        constraint check_praticipant_limit
+            check ([participants_limit] >= 10),
+    full_price         money
+        constraint df_studies_full_price default 7000.00 not null
+        constraint check_full_price
+            check ([full_price] >= 0),
+    advance_price      money
+        constraint df_studies_advance_price default 100.00,
+    constraint check_advance_price
+        check ([advance_price] <= [Studies].[full_price] AND [advance_price] >= 0)
 )
+go
+
+exec sp_addextendedproperty 'MS_Description', 'Studies name should be at least 5 characters long', 'SCHEMA', 'dbo',
+     'TABLE', 'Studies', 'CONSTRAINT', 'check_name'
 go
 ```
 
@@ -542,12 +627,13 @@ Zawiera uczestników poszczególnych studiów
 ```sql
 create table StudiesParticipants
 (
-    participant_id int not null
+    participant_id int identity
         constraint participant_id_studies_participants
             primary key,
     client_id      int not null
         constraint StudiesParticipants_Clients
-            references Clients,
+            references Clients
+            on update cascade on delete cascade,
     product_id     int not null
         constraint StudiesParticipants_Studies
             references Studies
@@ -556,7 +642,7 @@ go
 ```
 #### Exams
 
-Zawiera wyniki z egzaminów poszczególnych uczestników, datę napisania egzaminu oraz zdobyte punkty
+Zawiera przypisane studiom egzaminy, datę odbycia się egzaminów  oraz maksymalne możłiwe do zdobycia punkty
 
 ```sql
 create table Exams
@@ -573,6 +659,31 @@ create table Exams
 go
 ```
 
+#### ExamsTaken
+Zawiera dane odnośnie wyników egzaminów w których uczestnik studiów wziął udział
+```sql
+create table ExamsTaken
+(
+    exam_id        int not null
+        constraint ExamsTaken_Exams
+            references Exams
+            on update cascade
+        constraint check_date
+            check ([dbo].[checkExamDate]([exam_id]) <= getdate()),
+    participant_id int not null
+        constraint ExamsTaken_StudiesParticipants
+            references StudiesParticipants,
+    points         int,
+    constraint ExamsTaken_pk
+        primary key (participant_id, exam_id),
+    constraint check_points
+        check ([points] >= 0 AND [points] <= [dbo].[checkExamMaxPoints]([exam_id]))
+)
+go
+```
+
+##
+
 #### Apprenticeship
 
 Zawiera uczestników, którzy odbyli praktyki w określonym terminie
@@ -580,29 +691,36 @@ Zawiera uczestników, którzy odbyli praktyki w określonym terminie
 ```sql
 create table Apprenticeship
 (
-    participant_id int  not null
+    participant_id      int   not null
         constraint Apprenticeship_StudiesParticipants
-            references StudiesParticipants,
-    date           date not null,
+            references StudiesParticipants
+            on update cascade on delete cascade,
+    date                date  not null,
+    presence_percentage float not null
+        constraint check_presence_percentage
+            check ([presence_percentage] >= 0 AND [presence_percentage] <= 100),
     constraint participant_id
         primary key (participant_id, date)
 )
 go
 ```
 
-#### MeetingParticipants
+#### StudiesMeetingParticipants
 
 Zawiera listę obecnych studentów na danych spotkaniach
 
 ```sql
-create table MeetingParticipants
+create table StudiesMeetingParticipants
 (
     meeting_id     int not null
         constraint FK_MeetingParticipants_StudiesMeetings
-            references StudiesMeetings,
+            references StudiesMeetings
+            on update cascade on delete cascade,
     participant_id int not null
         constraint MeetingParticipants_StudiesParticipants
-            references StudiesParticipants,
+            references StudiesParticipants
+            on update cascade on delete cascade,
+    presence       bit,
     constraint meeting_id
         primary key (meeting_id, participant_id)
 )
@@ -617,21 +735,55 @@ Lista spotkań poszczególnych studiów, data spotkania, typ spotkania (FK do Me
 ```sql
 create table StudiesMeetings
 (
-    meeting_id              int   not null
-        constraint meeting_id_studies_meetings
+    meeting_id              int                              not null
+        constraint StudiesMeetings_pk
             primary key
         constraint StudiesMeetings_Products
-            references Products,
-    studies_id              int   not null
+            references Products
+            on update cascade on delete cascade,
+    studies_id              int                              not null
         constraint StudiesMeetings_Studies
             references Studies,
-    date                    date  not null,
-    type_id                 int   not null
+    date                    date                             not null,
+    type_id                 int                              not null
         constraint StudiesMeetings_MeetingType
-            references MeetingType,
-    participants_limit      int   not null,
-    student_price           money not null,
-    outer_participant_price money not null
+            references MeetingType
+            on update cascade on delete cascade,
+    participants_limit      int                              not null,
+    student_price           money
+        constraint df_student_price default 60.00            not null
+        constraint check_student_price
+            check ([student_price] >= 0),
+    outer_participant_price money
+        constraint df_outer_participant_price default 100.00 not null
+        constraint check_outer_participant_price
+            check ([outer_participant_price] >= 0),
+    meeting_topic           nvarchar(50)                     not null
+        constraint unique_meeting_topic
+            unique
+        constraint check_meeting_topic_length
+            check (len([meeting_topic]) > 5),
+    constraint check_participants_limit
+        check ([dbo].[checkParicipantsLimit]([studies_id]) <= [StudiesMeetings].[participants_limit])
+)
+go
+```
+
+### OuterMeetingsParticipants
+Tabela zawierająca uczestników spotkań na studiach nie będących uczestnikami studiów
+```sql
+create table OuterMeetingParticipants
+(
+    client_id  int                                     not null
+        constraint FK_OuterMeetingParticipants_Clients
+            references Clients,
+    meeting_id int                                     not null
+        constraint FK_OuterMeetingParticipants_StudiesMeetings
+            references StudiesMeetings,
+    presence   bit
+        constraint df_outer_meeting_presence default 0 not null,
+    constraint PK_OuterMeetingParticipants
+        primary key (client_id, meeting_id)
 )
 go
 ```
@@ -2882,7 +3034,7 @@ AS
             INNER JOIN dbo.Studies S on Exams.studies_id = S.product_id
         WHERE participant_id = @student_id
 ```
-#### checkExamStatus
+#### CheckExamStatus
 Umożliwia sprawdzenie czy dany uczestnik studiów zaliczył egzaminy 
 
 ```sql
@@ -2899,8 +3051,36 @@ AS
         RETURN 0
     END
 go
+```
 
+#### CheckExamDate
+Pozwala sprawdzić datę wybranego egzaminu
+```sql
+CREATE FUNCTION checkExamDate(@exam_id int)
+    RETURNS date
+AS
+BEGIN
+    DECLARE @exam_date date
+    SET @exam_date = ISNULL((SELECT date
+                                    FROM Exams
+                                    WHERE exam_id = @exam_id), NULL)
+    RETURN @exam_date
+END
+```
 
+#### CheckExamDate
+Pozwala sprawdzić maksymalną ilość punktów na egzaminie
+```sql
+CREATE FUNCTION checkExamDate(@exam_id int)
+    RETURNS date
+AS
+BEGIN
+    DECLARE @exam_date date
+    SET @exam_date = ISNULL((SELECT date
+                                    FROM Exams
+                                    WHERE exam_id = @exam_id), NULL)
+    RETURN @exam_date
+END
 ```
 
 #### GetStudiesMeetings
@@ -2945,6 +3125,23 @@ AS
         RETURN 0
     END
 go
+```
+
+#### CheckParticipantsLimit
+Pozwala sprawdzić limit osób zapisanych na studiach
+```sql
+CREATE FUNCTION checkParicipantsLimit(@studies_id int)
+    RETURNS int
+AS
+    BEGIN
+        DECLARE @paricipantsLimit int
+        SET @paricipantsLimit = ISNULL((SELECT participants_limit
+                                        FROM Studies
+                                        WHERE product_id = @studies_id), 0)
+        RETURN @paricipantsLimit
+    END
+go
+
 ```
 
 ### Nauczyciel
@@ -3018,7 +3215,14 @@ AS RETURN
         INNER JOIN Clients C on SP.client_id = C.client_id
         INNER JOIN Users U on C.client_id = U.user_id
     WHERE SM.meeting_id = @meeting_id
+    UNION
+    SELECT OuterMeetingParticipants.client_id, U.last_name, U.first_name
+    FROM OuterMeetingParticipants
+        INNER JOIN Clients C ON OuterMeetingParticipants.client_id = C.client_id
+        INNER JOIN Users U ON C.client_id = U.user_id
+    WHERE meeting_id = @meeting_id
 go
+
 ```
 
 #### GetCourseModuleAttendanceList
