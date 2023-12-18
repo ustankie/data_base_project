@@ -2586,7 +2586,7 @@ END
 Lista wyników egzaminów dla danego klienta
 
 ```sql
-CREATE clientsExam(@participant_id int)
+CREATE FUNCTION clientsExam(@participant_id int)
 	RETURNS table
 		AS
 		RETURN Select e.studies_id, et.exam_id, et.points
@@ -2594,7 +2594,7 @@ CREATE clientsExam(@participant_id int)
 		inner join ExamsTaken as et on et.exam_id=e.exam_id and et.participant_id = @participant_id
 ```
 
-#### ClientsApprenciships
+#### ClientsApprenticeships
 
 Liczba odbytych praktyk przez danego klienta
 
@@ -2915,7 +2915,7 @@ AS RETURN
     WHERE module_id = @module_id
 ```
 
-## Klient
+### Klient
 
 #### GetOwnedWebinars
 Umożliwia wyświetlenie zakupionych webinarów przez klienta
