@@ -2581,6 +2581,27 @@ END
 
 ### Kursy
 
+#### CoursePass
+
+Wypisanie wartości 1 gdy uczestnik zaliczył kurs i 0 gdy nie zaliczył
+
+```sql
+CREATE FUNCTION coursePass(@participant_id int)
+	RETURNS bit
+AS
+BEGIN
+	DECLARE @course_id int
+	SET @course_id = (Select product_id
+						FROM CoursesParticipants 
+						WHERE @participant_id=participant_id) 
+	DECLARE @presence float
+	SET @presence = [dbo].[coursesPresence](@participant_id, @course_id)
+	DECLARE @pass bit
+	SET @pass = IIF(@presence >= 80, 1, 0)
+	RETURN @pass
+END
+```
+
 #### CourseInfo
 
 Wypisanie podstawowych informacji o kursie takich jak: nazwa, cena, zaliczka, data rozpoczecia, data zakonczenia oraz język główny i jezyk na który kurs jest tłumaczony.
@@ -2664,7 +2685,7 @@ BEGIN
 END
 ```
 
-### ClientsCourses
+#### ClientsCourses
 
 Sprawdzenie na jakie kursy jest zapisany dany klient oraz status płatności tego kursu
 
@@ -2679,9 +2700,9 @@ CREATE FUNCTION clientCourses(@client_id int)
 		WHERE o.client_id=@client_id
 ```
 
-# Studia
+### Studia
 
-### StudiesPresence
+#### StudiesPresence
 
 Sprawdzenie obecności danego uczestnika studiów
 
@@ -2714,7 +2735,7 @@ AS
 go
 ```
 
-### GetExamScores
+#### GetExamScores
 Umożliwia wyświetlenie punktów i wyniku procentowego z egzaminów w których uczestnik studiów brał udział (dla wszystkich studiów na które dany klient zostął zapisany)
 
 ```sql
@@ -2729,7 +2750,7 @@ AS
         WHERE participant_id = @student_id
 ```
 
-### GetStudiesMeetings
+#### GetStudiesMeetings
 Umożliwia wyświetlenie wszystkich zaplanowanych spotkań na studiach
 ```sql
 CREATE FUNCTION getStudiesMeetings(@studies_id int)
@@ -2741,7 +2762,7 @@ AS RETURN
         ORDER BY date
 ```
 
-### GetRegisteredApprenticeship
+#### GetRegisteredApprenticeship
 Umożliwia wyświetlenie praktyk danego uczestnika studiów
 ```sql
 CREATE FUNCTION getRegisteredApprenticeship(@participant_id int)
@@ -2754,7 +2775,7 @@ AS RETURN
         WHERE Apprenticeship.participant_id = @participant_id
 ```
 
-### CheckApprenticeshipStatus
+#### CheckApprenticeshipStatus
 Umożliwia sprawdzenie czy dany uczestnik studiów ma zaliczone praktyki
 ```sql
 CREATE FUNCTION checkApprenticeshipStatus(@participant_id int)
@@ -2773,9 +2794,9 @@ AS
 go
 ```
 
-# Nauczyciel
+### Nauczyciel
 
-### GetTaughtWebinars
+#### GetTaughtWebinars
 Umożliwia wyświetlenie prowadzonych przez nauczyciela webinarów
 ```sql
 
@@ -2789,7 +2810,7 @@ AS RETURN
 
 ```
 
-### GetTaughtWebinars
+#### GetTaughtWebinars
 Umożliwia wyświetlenie prowadzonych przez nauczyciela kurśów
 ```sql
 
@@ -2803,7 +2824,7 @@ AS RETURN
 		
 ```
 
-### GetTaughtMeetings
+#### GetTaughtMeetings
 Umożliwia wyświetlenie prowadzonych przez nauczyciela kurśów
 ```sql
 
@@ -2817,7 +2838,7 @@ AS RETURN
 		
 ```
 
-### GetTaughtStudies
+#### GetTaughtStudies
 Umożliwia wyświetlenie prowadzonych przez nauczyciela kurśów
 ```sql
 CREATE FUNCTION getTaughtStudies(@academic_id int)
@@ -2831,7 +2852,7 @@ AS RETURN
 ```
 
 
-### GetStudiesMeetingAttendanceList
+#### GetStudiesMeetingAttendanceList
 Umożliwia wyswietlenie listy obecności na danym spotkaniu na studiach
 ```sql
 CREATE FUNCTION getStudiesMeetingAttendanceList(@meeting_id int)
@@ -2847,8 +2868,10 @@ AS RETURN
 go
 ```
 
-### GetCourseModuleAttendanceList
-Umożli
+#### GetCourseModuleAttendanceList
+
+Wyświetla liste uczestników danego modułu z kursu
+
 ```sql
 CREATE FUNCTION getCourseModuleAttendanceList(@module_id int)
     RETURNS table
@@ -2861,9 +2884,9 @@ AS RETURN
     WHERE module_id = @module_id
 ```
 
-# Klient
+## Klient
 
-### GetOwnedWebinars
+#### GetOwnedWebinars
 Umożliwia wyświetlenie zakupionych webinarów przez klienta
 ```sql
 CREATE FUNCTION getOwnedWebinars(@client_id int)
@@ -2877,7 +2900,7 @@ AS RETURN
         INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
     WHERE status_name = 'paid' AND client_id = @client_id
 ```
-### GetOwnedStudies
+#### GetOwnedStudies
 Umożliwia wyświetlenie zakupionych studiów przez klienta
 
 ```sql
@@ -2893,7 +2916,7 @@ CREATE FUNCTION getOwnedStudies(@client_id int)
                  INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
         WHERE status_name = 'paid' AND client_id = @client_id
 ```
-### GetOwnedStudeisMeetings
+#### GetOwnedStudeisMeetings
 Umożliwia wyświetlenie zakupionych spotkań ze studiów przez klienta
 
 ```sql
@@ -2908,7 +2931,7 @@ CREATE FUNCTION getOwnedStudeisMeetings(@client_id int)
                  INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
         WHERE status_name = 'paid' AND client_id = @client_id
 ```
-### GetOwnedCourses
+#### GetOwnedCourses
 Umożliwia wyświetlenie zakupionych kursów przez klienta
 ```sql
 CREATE FUNCTION getOwnedCourses(@client_id int)
@@ -2923,7 +2946,7 @@ CREATE FUNCTION getOwnedCourses(@client_id int)
         WHERE status_name = 'paid' AND client_id = @client_id
 ```
 
-### GetBucket
+#### GetBucket
 Pozwala wyświetlić zawartość koszyka klientów
 ```sql
 CREATE FUNCTION getBucket(@client_id int)
@@ -2939,7 +2962,7 @@ AS RETURN
 go
 ```
 
-### GetPaymentHistory
+#### GetPaymentHistory
 Umożliwia wyświetlenie historii płatności danego klienta
 
 ```sql
