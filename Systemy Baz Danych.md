@@ -2517,7 +2517,7 @@ END
 
 ### Ogólne
 
-##### GetProductName
+#### GetProductName
 Umożliwia konwersję id productu na nazwę, wykorzystrywana w innych funkcjach i widokach
 ```sql
 CREATE FUNCTION getProductName(@product_id int)
@@ -2538,7 +2538,7 @@ AS
             END
     END
 ```
-##### GetUserIdFromUserEmail
+#### GetUserIdFromUserEmail
 ```sql
 CREATE FUNCTION getUserIdFromUserEmail(@user_email nvarchar(50))
     RETURNS int
@@ -2550,7 +2550,7 @@ AS
         RETURN @user_id
     END
 ```
-##### GetParticipantIdFromUserAndProduct
+#### GetParticipantIdFromUserAndProduct
 ```sql
 CREATE FUNCTION getParticipantIdFromUserAndProduct(@user_id int, @product_id int)
     RETURNS int
