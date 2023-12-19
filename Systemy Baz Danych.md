@@ -2538,7 +2538,46 @@ AS
             END
     END
 ```
+##### GetUserIdFromUserEmail
+```sql
+CREATE FUNCTION getUserIdFromUserEmail(@user_email nvarchar(50))
+    RETURNS int
+AS
+    BEGIN
+        DECLARE @user_id int
+        SET @user_id = (SELECT user_id FROM Users WHERE email = @user_email)
 
+        RETURN @user_id
+    END
+```
+##### GetParticipantIdFromUserAndProduct
+```sql
+CREATE FUNCTION getParticipantIdFromUserAndProduct(@user_id int, @product_id int)
+    RETURNS int
+AS
+    BEGIN
+        DECLARE @product_type nvarchar(50)
+        SET @product_type = (SELECT product_type_name
+                             FROM Products
+                                INNER JOIN ProductType ON Products.product_type_id = ProductType.product_type_id
+                             WHERE product_id = @product_id)
+
+        RETURN CASE @product_type
+            WHEN 'webinar' THEN (SELECT client_id
+                                 FROM WebinarParticipants
+                                 WHERE product_id = @product_id AND client_id = @user_id )
+            WHEN 'course' THEN (SELECT participant_id
+                                FROM CoursesParticipants
+                                WHERE product_id = @product_id AND client_id = @user_id)
+            WHEN 'studies' THEN (SELECT participant_id
+                                 FROM StudiesParticipants
+                                 WHERE product_id = @product_id AND client_id = @user_id)
+            WHEN 'meeting' THEN (SELECT client_id
+                                 FROM OuterMeetingParticipants
+                                 WHERE meeting_id = @product_id AND client_id = @user_id)
+        END
+    END
+```
 ### Sekretarz
 
 #### ClientsExams
