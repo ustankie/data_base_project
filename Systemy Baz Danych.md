@@ -802,6 +802,26 @@ go
 
 ### Dla Sekretarza
 
+#### BorrowersList
+
+Lista klientów którzy skorzystali z oferty i za nią nie zapłacili (client_id, order_id)
+
+```sql
+CREATE VIEW [dbo].[BorrowersList] AS
+	Select client_id, order_id
+	From Orders as o
+	Where order_id in ( Select order_id
+			From Order_details as od
+			inner join 
+			(Select product_id as p_id, posted_date from Webinars where posted_date <= GETDATE()
+			UNION Select product_id as p_id, start_date from Courses where start_date <= GETDATE()
+			UNION Select studies_id as p_id, min(date)
+				from StudiesMeetings group by studies_id having (MIN(date)) <= GETDATE( ))
+			as p
+			on p.p_id=od.product_id)
+	and not( payment_status = 1)
+```
+
 #### PastEvents
 
 Raport dotyczący frekwencji na danym wydarzeniu (moduł, spotkanie ze studiów) wraz z postawowymi informacjami
