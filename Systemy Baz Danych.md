@@ -829,7 +829,7 @@ Raport dotyczący frekwencji na danym wydarzeniu (moduł, spotkanie ze studiów)
 ```sql
 CREATE VIEW PastEventsAttendance
 AS
-SELECT pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, mt.type_name as type, COUNT(mp.client_id) as attendance
+SELECT p.product_id, pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, mt.type_name as type, COUNT(mp.client_id) as attendance
 FROM StudiesMeetings as sm
 	inner join (SELECT participant_id as client_id, meeting_id
 				FROM StudiesMeetingParticipants
@@ -843,16 +843,16 @@ FROM StudiesMeetings as sm
 	inner join Products as p on p.product_id=s.product_id
 	join MeetingType as mt on mt.type_id=sm.type_id
 	join ProductType as pt on pt.product_type_id=p.product_type_id
-GROUP BY pt.product_type_name, s.name, sm.meeting_id, sm.date, mt.type_name
+GROUP BY p.product_id, pt.product_type_name, s.name, sm.meeting_id, sm.date, mt.type_name
 UNION
-SELECT pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, mt.type_name  as type, COUNT(ma.presence) as attendance
+SELECT p.product_id, pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, mt.type_name  as type, COUNT(ma.presence) as attendance
 FROM Modules as m
 	inner join ModulesAttendance as ma on m.module_id=ma.module_id and ma.presence=1
 	inner join Courses as c on c.product_id=m.product_id and m.end_date <= GETDATE()
 	inner join Products as p on p.product_id=c.product_id
 	join MeetingType as mt on mt.type_id=m.module_type
 	join ProductType as pt on pt.product_type_id=p.product_type_id
-GROUP BY pt.product_type_name, c.course_name, m.module_id, m.start_date, mt.type_name
+GROUP BY p.product_id, pt.product_type_name, c.course_name, m.module_id, m.start_date, mt.type_name
 GO
 ```
 
@@ -863,19 +863,19 @@ Spis webinarów, modułów oraz spotkań ze studiów, które odbywają się w ak
 ```sql
 CREATE VIEW EventsThisMonth
 AS
-SELECT pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, mt.type_name  as type
+SELECT p.product_id, pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, mt.type_name  as type
 FROM StudiesMeetings as sm
 	inner join Studies as s on s.product_id=sm.studies_id and YEAR(sm.date) = YEAR(GETDATE()) and MONTH(sm.date) = MONTH(GETDATE())
 	inner join Products as p on p.product_id=s.product_id
 	join MeetingType as mt on mt.type_id = sm.type_id
 	join ProductType as pt on pt.product_type_id=p.product_type_id
 UNION
-SELECT pt.product_type_name as category, w.webinar_name as product_name, w.product_id, w.posted_date as date, 'on-line' as type
+SELECT p.product_id, pt.product_type_name as category, w.webinar_name as product_name, w.product_id, w.posted_date as date, 'on-line' as type
 FROM Webinars as w
  	inner join Products as p on p.product_id=w.product_id and YEAR(w.posted_date) = YEAR(GETDATE()) and MONTH(w.posted_date) = MONTH(GETDATE())
 	join ProductType as pt on pt.product_type_id=p.product_type_id
 UNION
-SELECT pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, mt.type_name as type
+SELECT p.product_id, pt.product_type_name as category, c.course_name as product_name, m.module_id as id, m.start_date as date, mt.type_name as type
 FROM Modules as m
 	inner join Courses as c on c.product_id=m.product_id and YEAR(m.start_date) = YEAR(GETDATE()) and MONTH(m.start_date) = MONTH(GETDATE())
 	inner join Products as p on p.product_id=c.product_id
@@ -935,32 +935,32 @@ CREATE VIEW [dbo].[Bilocations] As
 Przedstawia podsumowanie finansowe 
 ```sql
 CREATE VIEW FinancialReport AS
-SELECT dbo.getProductName(Products.product_id) AS product_name, product_type_name, SUM(price) AS total_income
+SELECT Products.product_id, dbo.getProductName(Products.product_id) AS product_name, product_type_name, SUM(price) AS 		total_income
 FROM Payments
          INNER JOIN Orders ON Payments.order_id = Orders.order_id
          INNER JOIN Order_details ON Orders.order_id = Order_details.order_id
          INNER JOIN Products ON Order_details.product_id = Products.product_id
          INNER JOIN ProductType ON Products.product_type_id = ProductType.product_type_id
-GROUP BY Products.product_id, product_type_name
-go
+GROUP BY Products.product_id, Products.product_id, product_type_name
+GO
 ```
 
 #### GraduationCandidates
 Przedstawia listę osób które zaliczyły studia lub kurs - są kandydatami do otrzymania certyfikatu
 ```sql
 CREATE VIEW GraduationCandidates AS
-    SELECT first_name, last_name, dbo.getProductName(product_id) AS product_name
+    SELECT Clients.client_id, first_name, last_name, dbo.getProductName(product_id) AS product_name
     FROM StudiesParticipants
         INNER JOIN Clients ON StudiesParticipants.client_id = Clients.client_id
         INNER JOIN Users ON Clients.client_id = Users.user_id
     WHERE dbo.studiesPass(participant_id) = 1
     UNION
-    SELECT first_name, last_name, dbo.getProductName(product_id) AS product_name
+    SELECT Clients.client_id, first_name, last_name, dbo.getProductName(product_id) AS product_name
     FROM CoursesParticipants
         INNER JOIN Clients ON CoursesParticipants.client_id = Clients.client_id
         INNER JOIN Users ON Clients.client_id = Users.user_id
     WHERE dbo.coursePass(participant_id) = 1
-go
+GO
 
 ```
 
@@ -968,15 +968,15 @@ go
 Wyświetla daty wszystkich spotkań 
 ```sql
 CREATE VIEW AllMeetings AS
-    SELECT 'Module' AS type, module_name AS title, start_date AS date
+    SELECT product_id,'Module' AS type, module_name AS title, start_date AS date
     FROM Modules
     UNION
-    SELECT 'Studies Meeting' AS type, meeting_topic AS title, date AS date
+    SELECT studies_id,'Studies Meeting' AS type, meeting_topic AS title, date AS date
     FROM StudiesMeetings
     UNION
-    SELECT 'Webinar' AS type, webinar_name, posted_date AS date
+    SELECT product_id, 'Webinar' AS type, webinar_name, posted_date AS date
     FROM Webinars
-go
+GO
 ```
 ## Procedury
 
