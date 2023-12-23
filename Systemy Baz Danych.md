@@ -3243,6 +3243,131 @@ AS
         DEALLOCATE curs
     END
 ```
+## Role i upoważnienia
+
+### Sekretarz
+
+```sql
+Create role secretary
+
+GRANT SELECT ON PastEventsAttendance to secretary
+GRANT SELECT ON BorrowersList to secretary
+GRANT SELECT ON EventsThisMonth to secretary
+GRANT SELECT ON ExamsStats to secretary
+GRANT SELECT ON StudentsApprenticeship to secretary
+GRANT SELECT ON Bilocations to secretary
+
+GRANT EXECUTE ON GetProductName to secretary
+GRANT EXECUTE ON GetUserIdFromUserEmail to secretary
+GRANT EXECUTE ON GetParticipantIdFromUserAndProduct to secretary
+GRANT SELECT ON ClientsExam to secretary
+GRANT EXECUTE ON ClientsApprenticeships to secretary
+GRANT EXECUTE ON CoursePass to secretary
+GRANT SELECT ON CourseInfo to secretary
+GRANT EXECUTE ON ModulesPresence to secretary
+GRANT EXECUTE ON GetProductName to secretary
+GRANT EXECUTE ON CoursesPresence to secretary
+GRANT EXECUTE ON CoursesFreeSlots to secretary
+GRANT SELECT ON ClientCourses to secretary
+GRANT EXECUTE ON StudiesPass to secretary
+GRANT EXECUTE ON StudiesPresence to secretary
+GRANT EXECUTE ON CheckExamStatus to secretary
+GRANT EXECUTE ON CheckExamDate to secretary
+GRANT SELECT ON GetStudiesMeetings to secretary
+GRANT SELECT ON GetRegisteredApprenticeship to secretary
+GRANT EXECUTE ON GetApprenticeshipStatus to secretary
+GRANT EXECUTE ON ParticipantsLimit to secretary
+GRANT EXECUTE ON checkIfStudiesMeetingParticipantsAllowed to secretary
+GRANT EXECUTE ON GetStudiesMeetingAttendance to secretary
+GRANT EXECUTE ON GetCourseModuleAttendanceList to secretary
+GRANT EXECUTE ON GetProductName to secretary
+```
+### Manager
+
+```sql
+Create role manager
+
+GRANT SELECT ON FinancialReport to manager
+GRANT SELECT ON GraduationCandidates to manager
+GRANT SELECT ON AllMeetings to manager
+GRANT SELECT ON PastEventsAttendance to manager
+GRANT SELECT ON BorrowersList to manager
+GRANT SELECT ON EventsThisMonth to manager
+GRANT SELECT ON ExamsStats to manager
+GRANT SELECT ON StudentsApprenticeship to manager
+GRANT SELECT ON Bilocations to manager
+
+GRANT EXECUTE ON GetProductName to manager
+GRANT EXECUTE ON GetUserIdFromUserEmail to manager
+GRANT EXECUTE ON GetParticipantIdFromUserAndProduct to manager
+GRANT SELECT ON ClientsExam to manager
+GRANT EXECUTE ON ClientsApprenticeships to manager
+GRANT EXECUTE ON CoursePass to manager
+GRANT SELECT ON CourseInfo to manager
+GRANT EXECUTE ON ModulesPresence to manager
+GRANT EXECUTE ON GetProductName to manager
+GRANT EXECUTE ON CoursesPresence to manager
+GRANT EXECUTE ON CoursesFreeSlots to manager
+GRANT SELECT ON ClientCourses to manager
+GRANT EXECUTE ON StudiesPass to manager
+GRANT EXECUTE ON StudiesPresence to manager
+GRANT EXECUTE ON CheckExamStatus to manager
+GRANT EXECUTE ON CheckExamDate to manager
+GRANT SELECT ON GetStudiesMeetings to manager
+GRANT SELECT ON GetRegisteredApprenticeship to manager
+GRANT EXECUTE ON GetApprenticeshipStatus to manager
+GRANT EXECUTE ON ParticipantsLimit to manager
+GRANT EXECUTE ON checkIfStudiesMeetingParticipantsAllowed to manager
+GRANT EXECUTE ON GetStudiesMeetingAttendance to manager
+GRANT EXECUTE ON GetCourseModuleAttendanceList to manager
+GRANT EXECUTE ON GetProductName to manager
+```
+
+### Nauczyciel
+
+```sql
+Create role teacher
+
+GRANT SELECT ON getTaughtWebinars to teacher
+GRANT SELECT ON getTaughtCurses to teacher
+GRANT SELECT ON getTaughtStudiesMeetings to teacher
+GRANT SELECT ON getTaughtStudies to teacher
+GRANT SELECT ON getStudiesMeetingAttendanceList to teacher
+GRANT SELECT ON getCourseModuleAttendanceList to teacher
+GRANT SELECT ON getTaughtWebinars to teacher
+```
+
+### Klient
+
+```sql
+Create role client
+
+GRANT EXECUTE on CoursePass to client
+GRANT SELECT on CourseInfo to client
+GRANT EXECUTE on ModulesPresence to client
+GRANT EXECUTE on CoursesPresence to client
+GRANT EXECUTE on coursesFreeSlots to client
+GRANT SELECT on ClientCourses to client
+GRANT EXECUTE on StudiesPass to client
+GRANT EXECUTE on StudiesPresence to client
+GRANT SELECT on getExamScores to client
+GRANT EXECUTE on checkExamStatus to client
+GRANT EXECUTE on checkExamMaxPoints to client
+GRANT EXECUTE on checkExamDate to client
+GRANT SELECT on getStudiesmeetings to client
+GRANT SELECT on getRegisteredApprenticeship to client
+GRANT EXECUTE on CheckApprenticeshipStatus to client
+GRANT EXECUTE on checkParicipantsLimit to client
+```
+
+### Właściciel
+
+```sql
+Create role owner
+
+grant all privileges ON u_stankiew to owner
+```
+
 
 ## Dane testowe
 
