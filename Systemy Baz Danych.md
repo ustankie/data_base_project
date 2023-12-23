@@ -908,6 +908,28 @@ FROM Apprenticeship as a
 GROUP BY a.participant_id
 ```
 
+#### Bilocations
+
+Lista osób zapisanych na kilka wydarzeń odbywajacych sie w tym samym czasie (client_id, date, num_of_events
+
+```sql
+CREATE VIEW [dbo].[Bilocations] As
+	Select c.client_id, p.date, COUNT(p.date) as eventsNumber
+	From Clients as c
+	inner join Orders as o on c.can_pay_days_later=o.client_id
+	inner join Order_details as od on od.order_id=o.order_id
+	inner join( Select m.module_id as p_id, start_date as date from Modules as m where  not m.module_type = 1
+		UNION
+		Select sm.meeting_id as p_id, sm.date as date from StudiesMeetings as sm where not sm.type_id = 1
+		UNION
+		Select w.product_id as p_id, w.posted_date as date from Webinars as w
+		UNION
+		Select sm.student_price as p_id, sm.date as date from StudiesMeetings as sm where not sm.type_id = 1) as p
+	on p.p_id = od.product_id
+	where p.date >= GETDATE()
+	group by c.client_id, p.date
+```
+
 ### Dla Managera
 #### Financial Report
 Przedstawia podsumowanie finansowe 
