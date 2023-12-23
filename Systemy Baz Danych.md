@@ -438,8 +438,6 @@ create table Webinars
             references Products
             on update cascade on delete cascade,
     webinar_name nvarchar(50)             not null
-        constraint webinar_name_unique
-            unique,
     posted_date  date                     not null
         constraint check_posted_date
             check ([posted_date] >= '1990-01-01' AND [posted_date] <= getdate()),
@@ -487,8 +485,6 @@ create table Courses
             references Products
             on update cascade on delete cascade,
     course_name        nvarchar(50)               not null
-        constraint course_name_unique
-            unique,
     start_date         date                       not null,
     end_date           date                       not null,
     participants_limit int                        not null,
@@ -601,8 +597,6 @@ create table Studies
             references Products
             on update cascade on delete cascade,
     name               nvarchar(50)                      not null
-        constraint studies_name_unique
-            unique
         constraint check_name
             check (len([name]) >= 5),
     participants_limit int default 100                   not null
