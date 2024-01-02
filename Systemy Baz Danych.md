@@ -167,6 +167,15 @@ create table Users
             check ([Email] like '%_@__%.__%')
 )
 go
+
+create index Users_first_name_last_name_index
+    on Users (first_name, last_name)
+go
+
+create index Users_zip_code_city_street_address_country_index
+    on Users (zip_code, city, street_address, country)
+go
+
 ```
 
 #### Academics
@@ -260,7 +269,6 @@ create table Interpreted_languages
         primary key (interpreter_id, translate_from, translate_to)
 )
 go
-
 ```
 
 #### Languages
@@ -309,6 +317,14 @@ create table Products
             references Languages
 )
 go
+
+create index Products_product_type_id_index
+    on Products (product_type_id)
+go
+
+create index Products_language_index
+    on Products (language)
+go
 ```
 
 #### ProductType
@@ -346,6 +362,14 @@ create table Payments
     cancelled    bit
         constraint DF_Payments_cancelled default 0 not null
 )
+go
+
+create index Payments_order_id_index
+    on Payments (order_id)
+go
+
+create index Payments_payment_date_index
+    on Payments (payment_date)
 go
 ```
 
@@ -418,7 +442,6 @@ create table Statuses
     status_name varchar(20) not null
 )
 go
-
 ```
 
 
@@ -437,7 +460,7 @@ create table Webinars
         constraint Webinars_Products
             references Products
             on update cascade on delete cascade,
-    webinar_name nvarchar(50)             not null
+    webinar_name nvarchar(50)             not null,
     posted_date  date                     not null
         constraint check_posted_date
             check ([posted_date] >= '1990-01-01' AND [posted_date] <= getdate()),
@@ -446,6 +469,13 @@ create table Webinars
 )
 go
 
+create index Webinars_webinar_name_index
+    on Webinars (webinar_name)
+go
+
+create index Webinars_posted_date_index
+    on Webinars (posted_date)
+go
 ```
 
 #### WebinarParticipants
@@ -484,21 +514,30 @@ create table Courses
         constraint FK_Courses_Products
             references Products
             on update cascade on delete cascade,
-    course_name        nvarchar(50)               not null
+    course_name        nvarchar(50)               not null,
     start_date         date                       not null,
     end_date           date                       not null,
-    participants_limit int                        not null,
+    participants_limit int                        not null
+        constraint participants_limit
+            check ([participants_limit] >= 0),
     advance_price      money
         constraint df_advance_price default 50.00 not null,
     full_price         money
         constraint df_full_price default 400.00   not null,
     constraint ch_advance_price
-        check ([advance_price] < [full_price]),
+        check ([advance_price] < [full_price] AND [advance_price] >= 0),
     constraint ch_end_date
         check ([end_date] >= [start_date])
 )
 go
 
+create unique index Courses_course_name_uindex
+    on Courses (course_name)
+go
+
+create unique index Courses_start_date_end_date_uindex
+    on Courses (start_date, end_date)
+go
 ```
 
 #### CoursesParticipants
@@ -520,7 +559,6 @@ create table CoursesParticipants
             references Courses
 )
 go
-
 ```
 
 
@@ -555,6 +593,17 @@ create unique index Uniq_Modules
     on Modules (module_name)
 go
 
+create index Modules_product_id_index
+    on Modules (product_id)
+go
+
+create index Modules_start_date_end_date_index
+    on Modules (start_date, end_date)
+go
+
+create index Modules_classroom_index
+    on Modules (classroom)
+go
 ```
 
 #### ModulesAttendance
@@ -578,7 +627,6 @@ create table ModulesAttendance
         primary key (participant_id, module_id)
 )
 go
-
 ```
 
 ### 3.4. Studies
@@ -598,12 +646,10 @@ create table Studies
             on update cascade on delete cascade,
     name               nvarchar(50)                      not null
         constraint check_name
-            check (len([name]) >= 5),
+            check (len([name]) > 0),
     participants_limit int default 100                   not null
         constraint check_praticipant_limit
-            check ([participants_limit] >= 10)
-        constraint check_praticipant_limit
-            check ([participants_limit] >= 10 AND [participants_limit] <= 300),
+            check ([participants_limit] > 0),
     full_price         money
         constraint df_studies_full_price default 7000.00 not null
         constraint check_full_price
@@ -615,10 +661,9 @@ create table Studies
 )
 go
 
-exec sp_addextendedproperty 'MS_Description', 'Studies name should be at least 5 characters long', 'SCHEMA', 'dbo',
-     'TABLE', 'Studies', 'CONSTRAINT', 'check_name'
+create index Studies_name_index
+    on Studies (name)
 go
-
 ```
 
 #### StudiesParticipants
@@ -640,6 +685,14 @@ create table StudiesParticipants
             references Studies
 )
 go
+
+create index StudiesParticipants_client_id_index
+    on StudiesParticipants (client_id)
+go
+
+create index StudiesParticipants_product_id_index
+    on StudiesParticipants (product_id)
+go
 ```
 #### Exams
 
@@ -658,10 +711,17 @@ create table Exams
     date       date default getdate() not null,
     max_points int  default 100       not null
         constraint check_max_points
-            check ([max_points] > 0 AND [max_points] < 200)
+            check ([max_points] > 0)
 )
 go
 
+create index Exams_studies_id_index
+    on Exams (studies_id)
+go
+
+create index Exams_date_index
+    on Exams (date)
+go
 ```
 
 #### ExamsTaken
@@ -685,7 +745,6 @@ create table ExamsTaken
         check ([points] >= 0 AND [points] <= [dbo].[checkExamMaxPoints]([exam_id]))
 )
 go
-
 ```
 
 ##
@@ -706,6 +765,10 @@ create table Apprenticeship
         constraint check_presence_percentage
             check ([presence_percentage] >= 0 AND [presence_percentage] <= 100)
 )
+go
+
+create unique clustered index Apprenticeship_participant_id_date_uindex
+    on Apprenticeship (participant_id, date)
 go
 ```
 
@@ -729,7 +792,6 @@ create table StudiesMeetingParticipants
         primary key (meeting_id, participant_id)
 )
 go
-
 ```
 
 #### StudiesMeetings
@@ -763,13 +825,19 @@ create table StudiesMeetings
         constraint check_outer_participant_price
             check ([outer_participant_price] >= 0),
     meeting_topic           nvarchar(50)                     not null
-        constraint unique_meeting_topic
-            unique
         constraint check_meeting_topic_length
-            check (len([meeting_topic]) > 5),
+            check (len([meeting_topic]) > 0),
     constraint check_participants_limit
         check ([dbo].[checkParicipantsLimit]([studies_id]) <= [StudiesMeetings].[participants_limit])
 )
+go
+
+create index StudiesMeetings_studies_id_index
+    on StudiesMeetings (studies_id)
+go
+
+create index StudiesMeetings_date_index
+    on StudiesMeetings (date)
 go
 ```
 
@@ -818,7 +886,7 @@ CREATE VIEW [dbo].[BorrowersList] AS
 
 #### PastEvents
 
-Raport dotyczący frekwencji na danym wydarzeniu (moduł, spotkanie ze studiów) wraz z postawowymi informacjami
+Raport dotyczący frekwencji na danym wydarzeniu (moduł, spotkanie ze studiów) wraz z podstawowymi informacjami
 
 ```sql
 CREATE VIEW PastEventsAttendance
@@ -3346,7 +3414,7 @@ BEGIN
 END
 ```
 
-#### CheckIfClientPaiForStudies
+#### CheckIfClientPaidForStudies
 Podczas wpisywania do tabeli `StudiesParticipants` sprawdza czy wpisywany klient zapłacił za studia
 ```sql
 CREATE TRIGGER checkIfClientPaidForStudies_trg
