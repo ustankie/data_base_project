@@ -1040,7 +1040,6 @@ CREATE VIEW AllMeetings AS
     FROM Webinars
 GO
 ```
-## Procedury
 
 ## Procedury
 
