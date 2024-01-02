@@ -1042,100 +1042,158 @@ GO
 ```
 ## Procedury
 
+## Procedury
+
+### AddUser
+
+Dodaje użytkownika o podanych danych (imię, nazwisko, adres,email, typ użytkownika)
+
+```sql
+CREATE PROCEDURE [dbo].[uspAddUser]
+	@first_name nvarchar(50),
+	@last_name nvarchar(50),
+	@zip_code nvarchar(10),
+	@city nvarchar(50),
+	@street_address nvarchar(50),
+	@country nvarchar(50),
+	@email nvarchar(50),
+	@type_id int
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+		IF NOT EXISTS(
+			SELECT *
+			FROM User_types
+			where @type_id=user_type
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki rodzaj użytkownika nie istnieje',1 
+		END
+		
+		DECLARE @user_type_name nvarchar(50)
+		SELECT @user_type_name = type_name
+		FROM User_types
+		WHERE  @type_id=user_type
+
+		BEGIN TRANSACTION		
+			INSERT INTO Users (first_name,last_name,zip_code,city,street_address,country,user_type,email)
+
+					values(@first_name,@last_name,@zip_code,@city,@street_address,@country,@type_id,@email)
+
+			DECLARE @user_id INT;
+			SET  @user_id= SCOPE_IDENTITY();
+
+			IF @user_type_name='client'
+			Begin
+				insert into clients (client_id)
+				values(@user_id)
+			end
+			else IF @user_type_name='academic'
+			Begin
+				insert into academics (academic_id)
+				values(@user_id)
+			end
+			else IF @user_type_name='interpreter'
+			Begin
+				insert into interpreters (interpreter_id)
+				values(@user_id)
+			end
+		COMMIT TRANSACTION
+
+	END TRY
+	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+	        ROLLBACK TRAN
+		DECLARE @msg nvarchar(2048)=N'Błąd dodawania uzytkownika: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+
+```
+
 ### AddWebinar
 
 Dodaje webinar o podanej nazwie, id nauczyciela, nazwie języka oraz opcjonalnie danych o tłumaczu i języku, na który jest tłumaczone dane szkolenie do tabeli webinars oraz products
 
 ```sql
-CREATE PROCEDURE uspAddWebinar
- @language_name nvarchar(50),
- @academic_id int,
- @interpreter_id int=null,
- @translated_to_name nvarchar(50)=null,
- @webinar_name nvarchar(50)
+CREATE PROCEDURE [dbo].[uspAddWebinar] 
+	@language_id int,
+	@academic_id int,
+	@interpreter_id int=null,
+	@translate_to_id int=null,
+	@webinar_name nvarchar(50)
 AS
 BEGIN
- SET NOCOUNT ON;
- BEGIN TRY
-  IF EXISTS(
-   SELECT *
-   FROM webinars
-   where @webinar_name=webinar_name
-  )
-  BEGIN
-   ;
-   THROW 52000, N'Webinar o tej nazwie już istnieje',1 
-  END
-  IF NOT EXISTS(
-   SELECT *
-   FROM Academics
-   WHERE academic_id=@academic_id
-  )
-  BEGIN
-   ;
-   THROW 52000, N'Nie ma takiego nauczyciela!',1 
-  END
-  IF NOT EXISTS(
-   SELECT *
-   FROM Languages
-   WHERE @language_name=language_name
-  )
-  BEGIN
-   ;
-   THROW 52000, N'Nie ma takiego języka!',1 
-  END
-  IF NOT EXISTS(
-   SELECT *
-   FROM Languages
-   WHERE @translated_to_name=language_name
-  ) AND @translated_to_name is not null
-  BEGIN
-   ;
-   THROW 52000, N'Nie ma takiego języka!',1 
-  END
-  IF NOT EXISTS(
-   SELECT *
-   FROM Interpreters
-   WHERE interpreter_id=@interpreter_id
-  ) AND @interpreter_id is not null
-  BEGIN
-   ;
-   THROW 52000, N'Nie ma takiego tłumacza!',1 
-  END
+	SET NOCOUNT ON;
+	BEGIN TRY
+		IF NOT EXISTS(
+			SELECT *
+			FROM Academics
+			WHERE academic_id=@academic_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Nie ma takiego nauczyciela!',1 
+		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM Languages
+			WHERE @language_id=language_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Nie ma takiego języka!',1 
+		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM Languages
+			WHERE @translate_to_id=language_id
+		) AND @translate_to_id is not null
+		BEGIN
+			;
+			THROW 52000, N'Nie ma takiego języka!',1 
+		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM Interpreters
+			WHERE interpreter_id=@interpreter_id
+		) AND @interpreter_id is not null
+		BEGIN
+			;
+			THROW 52000, N'Nie ma takiego tłumacza!',1 
+		END
 
-  DECLARE @type_id INT
-  SELECT @type_id = product_type_id
-  FROM ProductType
-  WHERE 'webinar' = product_type_name
+		DECLARE @type_id INT
+		SELECT @type_id = product_type_id
+		FROM ProductType
+		WHERE 'webinar' = product_type_name
 
-  DECLARE @language_id INT
-  SELECT @language_id=language_id
-  FROM languages
-  WHERE @language_name=language_name
+		BEGIN TRANSACTION
+			INSERT INTO Products (product_type_id,language,academic_id,interpreter_id,translated_to)
 
-  DECLARE @translate_to_id INT
-  SELECT  @translate_to_id=language_id
-  FROM languages
-  WHERE  @translated_to_name=language_name
+					values(@type_id,@language_id,@academic_id,@interpreter_id,@translate_to_id)
 
-  
-  INSERT INTO Products (product_type_id,language,academic_id,interpreter_id,translated_to)
+			DECLARE @product_id INT;
+			SET  @product_id= SCOPE_IDENTITY();
 
-    values(@type_id,@language_id,@academic_id,@interpreter_id,@translate_to_id)
+			INSERT INTO Webinars(product_id,webinar_name, posted_date)
+			Values (@product_id,@webinar_name, GETDATE());
+		COMMIT TRANSACTION
 
-  DECLARE @product_id INT;
-  SET  @product_id= SCOPE_IDENTITY();
-
-  INSERT INTO Webinars(product_id,webinar_name, posted_date)
-  Values (@product_id,@webinar_name, GETDATE());
-
-  
- END TRY
- BEGIN CATCH
-  DECLARE @msg nvarchar(2048)=N'Błąd dodania webinaru: ' + ERROR_MESSAGE();
-  THROW 52000, @msg, 1;
- END CATCH
+		
+	END TRY
+	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+	        ROLLBACK TRAN
+		DECLARE @msg nvarchar(2048)=N'Błąd dodania webinaru: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
 END
+
 
 ```
 
@@ -1145,44 +1203,33 @@ Zmienia cenę webinaru o podanej nazwie
 
 ```sql
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-CREATE PROCEDURE uspSetWebinarPrice
- @webinar_name nvarchar(50),
- @price money
+CREATE PROCEDURE [dbo].[uspSetWebinarPrice]
+	@webinar_id int,
+	@price money
 AS
 BEGIN
 
- SET NOCOUNT ON;
- BEGIN TRY
-  IF NOT EXISTS(
-   SELECT *
-   FROM webinars
-   where @webinar_name=webinar_name
-  )
-  BEGIN
-   ;
-   THROW 52000, N'Webinar o tej nazwie nie istnieje',1 
-  END
+	SET NOCOUNT ON;
+	BEGIN TRY
+		IF NOT EXISTS(
+			SELECT *
+			FROM webinars
+			where @webinar_id=product_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Webinar o tej nazwie nie istnieje',1 
+		END
 
-  DECLARE @webinar_id INT;
-  SELECT @webinar_id=product_id
-  FROM webinars
-  WHERE @webinar_name=webinar_name
-
-  UPDATE webinars
-  SET price=@price
-  where product_id=@webinar_id
- END TRY
- BEGIN CATCH
-  DECLARE @msg nvarchar(2048)=N'Błąd zmiany ceny webinaru: ' + ERROR_MESSAGE();
-  THROW 52000, @msg, 1;
- END CATCH
+		UPDATE webinars
+		SET price=@price
+		where product_id=@webinar_id
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd zmiany ceny webinaru: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
 END
-GO
 
 ```
 
@@ -1191,103 +1238,83 @@ GO
 Dodaje kurs o podanej nazwie, id nauczyciela, nazwie języka oraz opcjonalnie danych o tłumaczu i języku, na który jest tłumaczone dane szkolenie oraz dacie rozpoczęcia i zakończenia i limicie uczestników do tabeli courses oraz products
 
 ```sql
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 CREATE PROCEDURE [dbo].[uspAddCourse] 
- @language_name nvarchar(50),
- @academic_id int,
- @interpreter_id int=null,
- @translated_to_name nvarchar(50)=null,
- @course_name nvarchar(50),
- @start_date date,
- @end_date date,
- @participants_limit int
+	@language_id int,
+	@academic_id int,
+	@interpreter_id int=null,
+	@translated_to_id int=null,
+	@course_name nvarchar(50),
+	@start_date date,
+	@end_date date,
+	@participants_limit int
 AS
 BEGIN
- SET NOCOUNT ON;
- BEGIN TRY
-  IF EXISTS(
-   SELECT *
-   FROM Courses
-   where @course_name=course_name
-  )
-  BEGIN
-   ;
-   THROW 52000, N'Lurs o tej nazwie już istnieje',1 
-  END
-  IF NOT EXISTS(
-   SELECT *
-   FROM Academics
-   WHERE academic_id=@academic_id
-  )
-  BEGIN
-   ;
-   THROW 52000, N'Nie ma takiego nauczyciela!',1 
-  END
-  IF NOT EXISTS(
-   SELECT *
-   FROM Languages
-   WHERE @language_name=language_name
-  )
-  BEGIN
-   ;
-   THROW 52000, N'Nie ma takiego języka!',1 
-  END
-  IF NOT EXISTS(
-   SELECT *
-   FROM Languages
-   WHERE @translated_to_name=language_name
-  ) AND @translated_to_name is not null
-  BEGIN
-   ;
-   THROW 52000, N'Nie ma takiego języka!',1 
-  END
-  IF NOT EXISTS(
-   SELECT *
-   FROM Interpreters
-   WHERE interpreter_id=@interpreter_id
-  ) AND @interpreter_id is not null
-  BEGIN
-   ;
-   THROW 52000, N'Nie ma takiego tłumacza!',1 
-  END
+	SET NOCOUNT ON;
+	BEGIN TRY
+		IF NOT EXISTS(
+			SELECT *
+			FROM Academics
+			WHERE academic_id=@academic_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Nie ma takiego nauczyciela!',1 
+		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM Languages
+			WHERE @language_id=language_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Nie ma takiego języka!',1 
+		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM Languages
+			WHERE @translated_to_id=language_id
+		) AND @translated_to_id is not null
+		BEGIN
+			;
+			THROW 52000, N'Nie ma takiego języka!',1 
+		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM Interpreters
+			WHERE interpreter_id=@interpreter_id
+		) AND @interpreter_id is not null
+		BEGIN
+			;
+			THROW 52000, N'Nie ma takiego tłumacza!',1 
+		END
 
-  DECLARE @type_id INT
-  SELECT @type_id = product_type_id
-  FROM ProductType
-  WHERE 'course' = product_type_name
+		DECLARE @type_id INT
+		SELECT @type_id = product_type_id
+		FROM ProductType
+		WHERE 'course' = product_type_name
 
-  DECLARE @language_id INT
-  SELECT @language_id=language_id
-  FROM languages
-  WHERE @language_name=language_name
 
-  DECLARE @translate_to_id INT
-  SELECT  @translate_to_id=language_id
-  FROM languages
-  WHERE  @translated_to_name=language_name
+		BEGIN TRANSACTION
+			INSERT INTO Products (product_type_id,language,academic_id,interpreter_id,translated_to)
 
-  
-  INSERT INTO Products (product_type_id,language,academic_id,interpreter_id,translated_to)
+					values(@type_id,@language_id,@academic_id,@interpreter_id,@translated_to_id)
+			
+			DECLARE @product_id INT;
+			SET  @product_id= SCOPE_IDENTITY();
 
-    values(@type_id,@language_id,@academic_id,@interpreter_id,@translate_to_id)
-
-  DECLARE @product_id INT;
-  SET  @product_id= SCOPE_IDENTITY();
-
-  INSERT INTO Courses(product_id,course_name, start_date,end_date,participants_limit)
-  Values (@product_id,@course_name, @start_date,@end_date,@participants_limit);
-
-  
- END TRY
- BEGIN CATCH
-  DECLARE @msg nvarchar(2048)=N'Błąd dodania kursu: ' + ERROR_MESSAGE();
-  THROW 52000, @msg, 1;
- END CATCH
+			INSERT INTO Courses(product_id,course_name, start_date,end_date,participants_limit)
+			Values (@product_id,@course_name, @start_date,@end_date,@participants_limit);
+		COMMIT
+		
+	END TRY
+	BEGIN CATCH
+	    IF @@TRANCOUNT > 0
+	        ROLLBACK TRAN
+		DECLARE @msg nvarchar(2048)=N'Błąd dodania kursu: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
 END
+
 
 ```
 
@@ -1297,7 +1324,7 @@ Ustawia cenę zaliczki i/lub pełną cenę kursu
 
 ```sql
 CREATE PROCEDURE [dbo].[uspSetCoursePrice]
-	@course_name nvarchar(50),
+	@course_id int,
 	@advance_price money=null,
 	@full_price money=null
 AS
@@ -1308,17 +1335,13 @@ BEGIN
 		IF NOT EXISTS(
 			SELECT *
 			FROM courses
-			where @course_name=course_name
+			where @course_id=product_id
 		)
 		BEGIN
 			;
 			THROW 52000, N'Kurs o tej nazwie nie istnieje',1 
 		END
 
-		DECLARE @course_id INT;
-		SELECT @course_id=product_id
-		FROM courses
-		WHERE @course_name=course_name
 		
 		IF @advance_price is not null
 		Begin
@@ -1350,25 +1373,16 @@ Dodaje studia o podanej nazwie, id nauczyciela, nazwie języka oraz opcjonalnie 
 ```sql
 
 CREATE PROCEDURE [dbo].[uspAddStudies] 
-	@language_name nvarchar(50),
+	@language_id int,
 	@academic_id int,
 	@interpreter_id int=null,
-	@translated_to_name nvarchar(50)=null,
+	@translate_to_id int=null,
 	@name nvarchar(50),
 	@participants_limit int
 AS
 BEGIN
 	SET NOCOUNT ON;
 	BEGIN TRY
-		IF EXISTS(
-			SELECT *
-			FROM Studies
-			where @name=name
-		)
-		BEGIN
-			;
-			THROW 52000, N'Studia o tej nazwie już istnieją',1 
-		END
 		IF NOT EXISTS(
 			SELECT *
 			FROM Academics
@@ -1381,7 +1395,7 @@ BEGIN
 		IF NOT EXISTS(
 			SELECT *
 			FROM Languages
-			WHERE @language_name=language_name
+			WHERE @language_id=language_id
 		)
 		BEGIN
 			;
@@ -1390,8 +1404,8 @@ BEGIN
 		IF NOT EXISTS(
 			SELECT *
 			FROM Languages
-			WHERE @translated_to_name=language_name
-		) AND @translated_to_name is not null
+			WHERE @translate_to_id=language_id
+		) AND @translate_to_id is not null
 		BEGIN
 			;
 			THROW 52000, N'Nie ma takiego języka!',1 
@@ -1411,31 +1425,23 @@ BEGIN
 		FROM ProductType
 		WHERE 'studies' = product_type_name
 
-		DECLARE @language_id INT
-		SELECT @language_id=language_id
-		FROM languages
-		WHERE @language_name=language_name
+		BEGIN TRANSACTION
+			INSERT INTO Products (product_type_id,language,academic_id,interpreter_id,translated_to)
 
-		DECLARE @translate_to_id INT
-		SELECT  @translate_to_id=language_id
-		FROM languages
-		WHERE  @translated_to_name=language_name
+					values(@type_id,@language_id,@academic_id,@interpreter_id,@translate_to_id)
 
-		
-		INSERT INTO Products (product_type_id,language,academic_id,interpreter_id,translated_to)
+			DECLARE @product_id INT;
+			SET  @product_id= SCOPE_IDENTITY();
 
-				values(@type_id,@language_id,@academic_id,@interpreter_id,@translate_to_id)
-
-		DECLARE @product_id INT;
-		SET  @product_id= SCOPE_IDENTITY();
-
-		INSERT INTO Studies(product_id,name,participants_limit)
-		Values (@product_id,@name,@participants_limit);
-
+			INSERT INTO Studies(product_id,name,participants_limit)
+			Values (@product_id,@name,@participants_limit);
+		COMMIT TRANSACTION
 		
 	END TRY
 	BEGIN CATCH
-		DECLARE @msg nvarchar(2048)=N'Błąd dodania kursu: ' + ERROR_MESSAGE();
+		IF @@TRANCOUNT > 0
+	        ROLLBACK TRAN
+		DECLARE @msg nvarchar(2048)=N'Błąd dodania studiów: ' + ERROR_MESSAGE();
 		THROW 52000, @msg, 1;
 	END CATCH
 END
@@ -1447,9 +1453,8 @@ END
 Ustawia cenę zaliczki i/lub pełną cenę studiów o podanej nazwie
 
 ```sql
-
 CREATE PROCEDURE [dbo].[uspSetStudiesPrice]
-	@name nvarchar(50),
+	@studies_id int,
 	@advance_price money=null,
 	@full_price money=null
 AS
@@ -1460,25 +1465,20 @@ BEGIN
 		IF NOT EXISTS(
 			SELECT *
 			FROM studies
-			where @name=name
+			where @studies_id=product_id
 		)
 		BEGIN
 			;
 			THROW 52000, N'Studia o tej nazwie nie istnieją',1 
 		END
 
-		DECLARE @studies_id INT;
-		SELECT @studies_id=product_id
-		FROM studies
-		WHERE @name=name
-		
 		IF @advance_price is not null
 		Begin
 			UPDATE studies
 			SET advance_price=@advance_price
 			where product_id=@studies_id
 		end
-		
+	
 		IF @full_price is not null
 		begin
 			UPDATE studies
@@ -1486,12 +1486,14 @@ BEGIN
 			where product_id=@studies_id
 		end
 
+
 	END TRY
 	BEGIN CATCH
 		DECLARE @msg nvarchar(2048)=N'Błąd zmiany ceny studiów: ' + ERROR_MESSAGE();
 		THROW 52000, @msg, 1;
 	END CATCH
 END
+
 
 ```
 
@@ -1502,14 +1504,14 @@ Dodaje spotkanie o podanej nazwie, id nauczyciela, nazwie języka oraz opcjonaln
 
 ```sql
 CREATE PROCEDURE [dbo].[uspAddStudiesMeetings] 
-	@language_name nvarchar(50),
+	@language_id int,
 	@academic_id int,
 	@interpreter_id int=null,
-	@translated_to_name nvarchar(50)=null,
+	@translate_to_id int=null,
 	@participants_limit int,
-	@type_name nvarchar(50),
+	@type_meeting_id INT,
 	@date date,
-	@studies_name nvarchar(50),
+	@studies_id int,
 	@meeting_topic nvarchar(50)
 AS
 BEGIN
@@ -1527,7 +1529,7 @@ BEGIN
 		IF NOT EXISTS(
 			SELECT *
 			FROM Languages
-			WHERE @language_name=language_name
+			WHERE @language_id=language_id
 		)
 		BEGIN
 			;
@@ -1536,8 +1538,8 @@ BEGIN
 		IF NOT EXISTS(
 			SELECT *
 			FROM Languages
-			WHERE @translated_to_name=language_name
-		) AND @translated_to_name is not null
+			WHERE @translate_to_id=language_id
+		) AND @translate_to_id is not null
 		BEGIN
 			;
 			THROW 52000, N'Nie ma takiego języka!',1 
@@ -1554,20 +1556,20 @@ BEGIN
 		IF NOT EXISTS(
 			SELECT *
 			FROM MeetingType
-			WHERE type_name=@type_name
+			WHERE type_name=@type_meeting_id
 		) 
 		BEGIN
 			;
-			THROW 52000, N'Nie ma takiich studiów!',1 
+			THROW 52000, N'!Nie ma takiego typu spotkania!',1 
 		END
 		IF NOT EXISTS(
 			SELECT *
 			FROM Studies
-			WHERE name=@studies_name
+			WHERE name=@studies_id
 		) 
 		BEGIN
 			;
-			THROW 52000, N'Nie ma takiego typu spotkania!',1 
+			THROW 52000, N'Nie ma takich studiów',1 
 		END
 
 		if @meeting_topic IS NULL
@@ -1576,53 +1578,33 @@ BEGIN
                 THROW 52000, N'Temat spotkania nie może być pusty!',1
             END
 
-		DECLARE @studies_id INT
-		SELECT @studies_id = product_id
-		FROM Studies
-		WHERE name=@studies_name
-
-		DECLARE @type_meeting_id INT
-		SELECT  @type_meeting_id = type_id
-		FROM MeetingType
-		WHERE type_name=@type_name
 
 		DECLARE @type_id INT
 		SELECT @type_id = product_type_id
 		FROM ProductType
 		WHERE 'meeting' = product_type_name
 
-		DECLARE @language_id INT
-		SELECT @language_id=language_id
-		FROM languages
-		WHERE @language_name=language_name
 
-		DECLARE @translate_to_id INT
-		SELECT  @translate_to_id=language_id
-		FROM languages
-		WHERE  @translated_to_name=language_name
+		BEGIN TRANSACTION
+			INSERT INTO Products (product_type_id,language,academic_id,interpreter_id,translated_to)
 
-		
-		INSERT INTO Products (product_type_id,language,academic_id,interpreter_id,translated_to)
+					values(@type_id,@language_id,@academic_id,@interpreter_id,@translate_to_id)
 
-				values(@type_id,@language_id,@academic_id,@interpreter_id,@translate_to_id)
+			DECLARE @product_id INT;
+			SET  @product_id= SCOPE_IDENTITY();
 
-		DECLARE @product_id INT;
-		SET  @product_id= SCOPE_IDENTITY();
-
-		INSERT INTO StudiesMeetings(meeting_id,studies_id,date,type_id,participants_limit, meeting_topic)
-		Values (@product_id,@studies_id,@date,@type_meeting_id,@participants_limit, @meeting_topic);
-
+			INSERT INTO StudiesMeetings(meeting_id,studies_id,date,type_id,participants_limit, meeting_topic)
+			Values (@product_id,@studies_id,@date,@type_meeting_id,@participants_limit, @meeting_topic);
+		COMMIT TRANSACTION
 		
 	END TRY
 	BEGIN CATCH
-		DECLARE @msg nvarchar(2048)=N'Błąd dodania kursu: ' + ERROR_MESSAGE();
+		IF @@TRANCOUNT > 0
+	        ROLLBACK TRAN
+		DECLARE @msg nvarchar(2048)=N'Błąd dodania spotkania: ' + ERROR_MESSAGE();
 		THROW 52000, @msg, 1;
 	END CATCH
 END
-go
-
-
-
 ```
 
 ### SetMeetingPrice
@@ -1671,13 +1653,83 @@ BEGIN
 END
 ```
 
+### AddMeetingParticipant
+
+Dodaje uczestnika spotkania o podanym id
+
+```sql
+CREATE PROCEDURE [dbo].[uspAddMeetingParticipant]
+	@client_id int,
+	@product_id int
+
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY		
+
+		IF NOT EXISTS(
+			SELECT *
+			FROM Clients
+			where @client_id=client_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Klient o podanym id nie istnieje',1 
+		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM StudiesMeetings
+			where @product_id=meeting_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki meeting nie istnieje',1 
+		END
+		
+		DECLARE @participant_id INT;
+		SELECT @participant_id=participant_id
+		from StudiesParticipants
+		where @client_id=client_id
+
+		DECLARE @student_studies_id INT;
+		SELECT @student_studies_id=product_id
+		from StudiesParticipants
+		where @client_id=client_id
+
+		DECLARE @meeting_studies_id INT;
+		SELECT @meeting_studies_id=studies_id
+		from StudiesMeetings
+		where meeting_id=@product_id
+
+		IF @participant_id is null or @student_studies_id!=@meeting_studies_id
+			BEGIN
+				INSERT INTO OuterMeetingParticipants(client_id,meeting_id)
+				values(@client_id,@product_id)
+			END
+		ELSE
+			BEGIN
+				INSERT INTO StudiesMeetingParticipants(meeting_id,participant_id)
+				values(@product_id,@participant_id)
+			END
+
+
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd dodania uczestnika spotkania: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+```
 ### AddWCSParticipant
 
 Dodaje uczestnika do szkolenia podanego typu (kurs, studia, webinar)
 
 ```sql
 CREATE PROCEDURE [dbo].[uspAddWCSParticipant]
-	@type_name nvarchar(50),
+	@type_id int,
 	@client_id int,
 	@product_id int
 
@@ -1686,10 +1738,10 @@ BEGIN
 
 	SET NOCOUNT ON;
 	BEGIN TRY
-		DECLARE @type_id INT
-		SELECT @type_id = product_type_id
+		DECLARE @type_name  nvarchar(50)
+		SELECT @type_name = product_type_name
 		FROM ProductType
-		WHERE @type_name = product_type_name
+		WHERE @type_id = product_type_id
 		
 		IF NOT EXISTS(
 			SELECT *
@@ -1734,6 +1786,10 @@ BEGIN
 		begin
 			INSERT INTO StudiesParticipants(product_id,client_id)
 			values(@product_id,@client_id)
+		end
+		else if @type_name='meeting'
+		begin
+			exec uspAddMeetingParticipant @client_id,@product_id
 		end
 
 
@@ -1829,7 +1885,7 @@ Ustawia limit uczestników dla produktu podanego typu produktu (spotkania, kursu
 CREATE PROCEDURE [dbo].[uspSetParticipantsLimit]
 	@product_id int,
 	@limit int,
-	@product_type_name nvarchar(50)
+	@product_type_id int
 AS
 BEGIN
 
@@ -1839,13 +1895,17 @@ BEGIN
 		IF NOT EXISTS(
 			SELECT *
 			FROM ProductType
-			where @product_type_name=product_type_name
+			where @product_type_id=product_type_id
 		)
 		BEGIN
 			;
 			THROW 52000, N'Taki rodzaj szkolenia nie istnieje',1 
 		END
 
+		DECLARE @product_type_name nvarchar(50);
+		Select @product_type_name=product_type_name
+		from ProductType
+		where @product_id=product_type_id
 
 		IF @product_type_name='course'
 		begin		
@@ -1903,20 +1963,18 @@ BEGIN
 
 	END TRY
 	BEGIN CATCH
-		DECLARE @msg nvarchar(2048)=N'Błąd zezwolenia na opóźnienie w płątności: ' + ERROR_MESSAGE();
+		DECLARE @msg nvarchar(2048)=N'Błąd zmiany limitu miejsc: ' + ERROR_MESSAGE();
 		THROW 52000, @msg, 1;
 	END CATCH
 END
 
 ```
+### AddMeetingPresence
 
-### AddPresence
-
-Dodaje status obecności dla podanego użytkownika oraz id produktu. Konieczne jest również określenie, czy szkolenie jest modułem, czy spotkaniem.
+Dodaje status obecności na spotkaniu dla podanego użytkownika oraz id spotkania.
 
 ```sql
-CREATE PROCEDURE [dbo].[uspAddPresence]
-	@type_name nvarchar(50),
+CREATE PROCEDURE [dbo].[uspAddMeetingPresence]
 	@product_id int,
 	@participant_id int,
 	@presence bit
@@ -1924,54 +1982,143 @@ AS
 BEGIN
 
 	SET NOCOUNT ON;
-	BEGIN TRY
-		
-		IF @type_name!='module' and @type_name!='meeting'
+	BEGIN TRY	
+		IF NOT EXISTS(
+			SELECT *
+			FROM StudiesMeetings
+			where @product_id=meeting_id
+		)
 		BEGIN
 			;
-			THROW 52000, N'Taki rodzaj szkolenia nie istnieje lub nie jest na nim sprawdzana obecność',1 
+			THROW 52000, N'Takie spotkanie nie istnieje',1 
 		END
 
-
-		IF @type_name='module'
-		begin		
-			IF NOT EXISTS(
-				SELECT *
-				FROM Modules
-				where @product_id=module_id
-			)
-			BEGIN
-				;
-				THROW 52000, N'Taki moduł nie istnieje',1 
-			END
-
-			INSERT INTO ModulesAttendance(participant_id,module_id,presence)
-			values(@participant_id,@product_id,@presence)
-		end
-		else IF @type_name='meeting'
-		begin		
-			IF NOT EXISTS(
-				SELECT *
-				FROM StudiesMeetings
-				where @product_id=meeting_id
-			)
-			BEGIN
-				;
-				THROW 52000, N'Takie spotkanie nie istnieje',1 
-			END
-
-			INSERT INTO MeetingParticipants(participant_id,meeting_id,presence)
-			values(@participant_id,@presence,@presence)
-		end
+		INSERT INTO StudiesMeetingParticipants(participant_id,meeting_id,presence)
+		values(@participant_id,@product_id,@presence)
+	
 
 	END TRY
 	BEGIN CATCH
-		DECLARE @msg nvarchar(2048)=N'Błąd wpisywania obecności: ' + ERROR_MESSAGE();
+		DECLARE @msg nvarchar(2048)=N'Błąd wpisywania obecności na spotkaniu: ' + ERROR_MESSAGE();
 		THROW 52000, @msg, 1;
 	END CATCH
 END
 
 ```
+
+### SetMeetingPresence
+
+Zmienia status obecności danego użytkownika na spotkaniu.
+
+```sql
+CREATE PROCEDURE [dbo].[uspSetMeetingPresence]
+	@product_id int,
+	@participant_id int,
+	@presence bit
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY	
+		IF NOT EXISTS(
+			SELECT *
+			FROM StudiesMeetings
+			where @product_id=meeting_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Takie spotkanie nie istnieje',1 
+		END
+
+		UPDATE StudiesMeetingParticipants
+		SET presence=@presence
+		where @participant_id=participant_id and @product_id=meeting_id
+	
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd zmiany obecności na spotkaniu: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+```
+
+### AddModulePresence
+
+Dodaje status obecności na module dla podanego użytkownika oraz id modułu.
+
+
+```sql
+CREATE PROCEDURE [dbo].[uspAddModulePresence]
+	@module_id int,
+	@participant_id int,
+	@presence bit
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY	
+		IF NOT EXISTS(
+			SELECT *
+			FROM Modules
+			where @module_id=module_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki moduł nie istnieje',1 
+		END
+
+		INSERT INTO ModulesAttendance(participant_id,module_id,presence)
+		values(@participant_id,@module_id,@presence)
+	
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd wpisywania obecności na module: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+```
+### SetModulePresence
+
+Zmienia status obecności danego użytkownika na module.
+
+```sql
+CREATE PROCEDURE [dbo].[uspSetModulePresence]
+	@module_id int,
+	@participant_id int,
+	@presence bit
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY	
+		IF NOT EXISTS(
+			SELECT *
+			FROM Modules
+			where @module_id=module_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki moduł nie istnieje',1 
+		END
+
+		UPDATE ModulesAttendance
+		SET presence=@presence
+		where @participant_id=participant_id and @module_id=module_id
+	
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @msg nvarchar(2048)=N'Błąd zmiany obecności na module: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
+
+```
+
 
 ### AddExamResult
 
@@ -2038,8 +2185,7 @@ Dla podanego uczestnika studiów dodaje datę odbycia przez niego praktyk do tab
 ```sql
 CREATE PROCEDURE [dbo].[uspAddApprenticeship]
 	@date date,
-	@participant_id int,
-	@presence_percent float
+	@participant_id int
 AS
 BEGIN
 
@@ -2063,14 +2209,8 @@ BEGIN
 			THROW 52000, N'Wprowadzenie praktyk o dacie przyszłej niemożliwe',1 
 		END
 
-		IF @presence_percent NOT BETWEEN 0.0 AND 100.0
-        Begin
-            ;
-            THROW 52000, N'Procent obecności musi być w przedziale 0..100%',1
-        END
-
-		INSERT INTO Apprenticeship(participant_id,date,presence_percentage)
-		values(@participant_id,@date, @presence_percent)
+		INSERT INTO Apprenticeship(participant_id,date)
+		values(@participant_id,@date)
 
 
 	END TRY
@@ -2210,6 +2350,12 @@ BEGIN
 		DECLARE @initial_status INT;
 		SET @initial_status=@status
 
+		IF @initial_status=1
+		BEGIN
+			;
+			THROW 52000, N'Zamówienie było już opłacone',1 
+		END
+
 		SELECT @status=status_id
 		from statuses 
 		where status_name='paid'
@@ -2221,190 +2367,265 @@ BEGIN
 		from Order_details
 		where order_id=@order_id
 
+		BEGIN TRANSACTION
 
-		DECLARE @product_id INT;
+			DECLARE @product_id INT;
 
-		Open curOrder
+			Open curOrder
 
-		FETCH NEXT FROM curOrder INTO @product_id
-		WHILE @@FETCH_STATUS = 0
-		BEGIN	
-			DECLARE @is_advance bit
-			SELECT @is_advance=is_advance
-			from Order_details
-			where @product_id=product_id and @order_id=order_id
+			FETCH NEXT FROM curOrder INTO @product_id
+			WHILE @@FETCH_STATUS = 0
+			BEGIN	
+				DECLARE @is_advance bit
+				SELECT @is_advance=is_advance
+				from Order_details
+				where @product_id=product_id and @order_id=order_id
 
 
-			DECLARE @product_type nvarchar(50)
-			SELECT @product_type=product_type_name
-			from Products p
-			join ProductType pt on pt.product_type_id=p.product_type_id
-			where product_id=@product_id
+				DECLARE @product_type nvarchar(50)
+				SELECT @product_type=product_type_name
+				from Products p
+				join ProductType pt on pt.product_type_id=p.product_type_id
+				where product_id=@product_id
 
-			DECLARE @price money
+				DECLARE @price money
 
-			IF @product_type='webinar'
-			BEGIN
-				select @price=price
-				from webinars
-				where @product_id=product_id
+				IF @product_type='webinar'
+				BEGIN
+					select @price=price
+					from webinars
+					where @product_id=product_id
 				
-				if not exists(
-				select *
-				from WebinarParticipants
-				where @client_id=client_id
-				)
-				begin
-					Insert into WebinarParticipants(product_id,client_id)
-					values (@product_id,@client_id)
-				end
-			END
+				END
 
-			else IF @product_type='course'
-			BEGIN
-				IF @is_advance=1
-				begin
-					SELECT @status=status_id
-					from statuses 
-					where status_name='partially_paid'
+				else IF @product_type='course'
+				BEGIN
+					IF @is_advance=1
+					begin
+						SELECT @status=status_id
+						from statuses 
+						where status_name='partially_paid'
 
-					select @price=advance_price
-					from courses
-					where @product_id=product_id
-				end
-				ELSE
-				begin
-					select @price=full_price
-					from courses
-					where @product_id=product_id
-				end
-				if not exists(
-				select *
-				from CoursesParticipants
-				where @client_id=client_id
-				)
-				begin
+						select @price=advance_price
+						from courses
+						where @product_id=product_id
+					end
+					ELSE
+					begin
+						select @price=full_price
+						from courses
+						where @product_id=product_id
+					end
+				END
 
-					Insert into CoursesParticipants(product_id,client_id)
-					values (@product_id,@client_id)
-				end
-			END
-
-			else IF @product_type='studies'
-			BEGIN
-				IF @is_advance=1
-				begin
-					SELECT @status=status_id
-					from statuses 
-					where status_name='partially_paid'
+				else IF @product_type='studies'
+				BEGIN
+					IF @is_advance=1
+					begin
+						SELECT @status=status_id
+						from statuses 
+						where status_name='partially_paid'
 
 
-					select @price=advance_price
-					from Studies
-					where @product_id=product_id
-				end
-				ELSE
+						select @price=advance_price
+						from Studies
+						where @product_id=product_id
+					end
+					ELSE
+					begin
+						select @price=full_price
+						from studies
+						where @product_id=product_id
+					end
+
+				END
+				else if @product_type='meeting'
 				begin
-					select @price=full_price
-					from studies
-					where @product_id=product_id
-				end
-				if not exists(
-				select *
-				from StudiesParticipants
-				where @client_id=client_id
-				)
-				begin
-					Insert into StudiesParticipants(product_id,client_id)
-					values (@product_id,@client_id)
-				end
-			END
-			else if @product_type='meeting'
-			begin
 				
-				if exists(
-					Select * 
-					from StudiesParticipants
-					where @client_id=client_id
-				)
-				begin
-					select @price=student_price
+					DECLARE @meeting_studies_id1 INT;
+					SELECT @meeting_studies_id1=studies_id
 					from StudiesMeetings
-					where @product_id=meeting_id
-
-					DECLARE @participant_id int
-					select @participant_id=participant_id
-					from StudiesParticipants
-					where client_id=@client_id
-					if not exists(
-					select *
-					from MeetingParticipants
-					where @participant_id=participant_id
+					where meeting_id=@product_id
+					if exists(
+						Select * 
+						from StudiesParticipants
+						where @client_id=client_id and product_id=@meeting_studies_id1
 					)
 					begin
-						Insert into MeetingParticipants(meeting_id,participant_id,presence)
-						values (@product_id,@participant_id,0)
+						select @price=student_price
+						from StudiesMeetings
+						where @product_id=meeting_id
+
 					end
-				end
-				else
-				begin
-					select @price=outer_participant_price
-					from StudiesMeetings
-					where @product_id=meeting_id
-
-
-					if not exists(
-					select *
-					from OuterMeetingParticipants
-					where @client_id=client_id
-					)
+					else
 					begin
-						Insert into OuterMeetingParticipants(meeting_id,client_id,presence)
-						values (@product_id,@client_id,0)
+						select @price=outer_participant_price
+						from StudiesMeetings
+						where @product_id=meeting_id
+
 					end
 				end
+
+				SET @total_price = @total_price +@price;
+
+				FETCH NEXT FROM curOrder INTO @product_id;
+
+			END
+
+			close curOrder
+			DEALLOCATE curOrder;
+
+
+			IF @initial_status=(
+			select status_id
+			from Statuses
+			where status_name='partially_paid'
+			)
+			Begin
+				declare @former_price money;
+				set @former_price=(select sum(price)
+				from payments
+				where order_id=@order_id
+				group by order_id)
+				print(@total_price)
+
+				set @total_price=@total_price-@former_price
 			end
 
-			SET @total_price = @total_price +@price;
+			IF @total_price<0
+			BEGIN
+				ROLLBACK;
+				THROW 52000, N'Cena ujemna!',1 
+			END
 
-			FETCH NEXT FROM curOrder INTO @product_id;
-		
+			INSERT INTO Payments(order_id,payment_date, price)
+			Values (@order_id,GETDATE(),@total_price);
 
-		END
-
-		close curOrder
-		DEALLOCATE curOrder;
-
-
-		IF @initial_status=(
-		select status_id
-		from Statuses
-		where status_name='partially_paid'
-		)
-		Begin
-			declare @former_price money;
-			set @former_price=(select sum(price)
-			from payments
+			UPDATE Orders
+			SET payment_status=@status
 			where order_id=@order_id
-			group by order_id)
-			print(@total_price)
 
-			set @total_price=@total_price-@former_price
-		end
+			--insert to relevant tables
 
-		INSERT INTO Payments(order_id,payment_date, price)
-		Values (@order_id,GETDATE(),@total_price);
+			DECLARE curOrder1 cursor for
+			select product_id
+			from Order_details
+			where order_id=@order_id
 
-		UPDATE Orders
-		SET payment_status=@status
-		where order_id=@order_id
+
+
+			Open curOrder1
+
+			FETCH NEXT FROM curOrder1 INTO @product_id
+			WHILE @@FETCH_STATUS = 0
+			BEGIN	
+
+				DECLARE @product_type1 nvarchar(50)
+				SELECT @product_type1=product_type_name
+				from Products p
+				join ProductType pt on pt.product_type_id=p.product_type_id
+				where product_id=@product_id
+				PRINT(@product_type1)
+
+
+				IF @product_type1='webinar'
+				BEGIN
+					if not exists(
+					select *
+					from WebinarParticipants
+					where @client_id=client_id
+					)
+					begin
+						Insert into WebinarParticipants(product_id,client_id)
+						values (@product_id,@client_id)
+					end
+				END
+
+				else IF @product_type1='course'
+				BEGIN
+					if not exists(
+					select *
+					from CoursesParticipants
+					where @client_id=client_id
+					)
+					begin
+
+						Insert into CoursesParticipants(product_id,client_id)
+						values (@product_id,@client_id)
+					end
+				END
+
+				else IF @product_type1='studies'
+				BEGIN
+					if not exists(
+					select *
+					from StudiesParticipants
+					where @client_id=client_id and @product_id=product_id
+					)
+					begin
+
+						Insert into StudiesParticipants(product_id,client_id)
+						values (@product_id,@client_id)
+					end
+				END
+				else if @product_type1='meeting'
+				begin
+					DECLARE @meeting_studies_id INT;
+					SELECT @meeting_studies_id=studies_id
+					from StudiesMeetings
+					where meeting_id=@product_id
+					if exists(
+						Select * 
+						from StudiesParticipants
+						where @client_id=client_id and product_id=@meeting_studies_id
+					)
+					begin
+						DECLARE @participant_id int
+						select @participant_id=participant_id
+						from StudiesParticipants
+						where client_id=@client_id
+						if not exists(
+						select *
+						from StudiesMeetingParticipants
+						where @participant_id=participant_id
+						)
+						begin
+							Insert into StudiesMeetingParticipants(meeting_id,participant_id,presence)
+							values (@product_id,@participant_id,0)
+						end
+					end
+					else
+					begin
+						if not exists(
+						select *
+						from OuterMeetingParticipants
+						where @client_id=client_id
+						)
+						begin
+							Insert into OuterMeetingParticipants(meeting_id,client_id,presence)
+							values (@product_id,@client_id,0)
+						end
+					end
+				end
+
+
+				FETCH NEXT FROM curOrder1 INTO @product_id;
+
+			END
+
+			close curOrder1
+			DEALLOCATE curOrder1;
+		COMMIT TRANSACTION
 
 	END TRY
 	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+	        ROLLBACK TRAN
 		DECLARE @msg nvarchar(2048)=N'Błąd płatności: ' + ERROR_MESSAGE();
 		THROW 52000, @msg, 1;
 	END CATCH
 END
+
 
 ```
 ### AddOrder
@@ -2479,6 +2700,24 @@ BEGIN
 			;
 			THROW 52000, N'Taki produkt nie istnieje',1 
 		END
+
+		IF @is_advance=1
+		begin
+			DECLARE @product_type nvarchar(50)
+			select @product_type=product_type_name
+			from Products p
+			join ProductType pt
+			on pt.product_type_id=p.product_type_id
+			where @product_id=product_id
+			
+			if @product_type!='studies' and @product_type!='course'
+			begin
+				;
+				THROW 52000, N'Ten produkt nie posaida opcji "zaliczka"',1 
+			end
+
+		end
+		
 		
 		declare @status nvarchar(50)
 		select @status=status_name
@@ -2559,6 +2798,8 @@ END
 
 ### DeleteProductFromOrder
 
+Usuwa produkt z zamówienia
+
 ```sql
 
 CREATE PROCEDURE [dbo].[uspDeleteProductFromOrder]
@@ -2615,6 +2856,70 @@ BEGIN
 END
 
 
+```
+
+### AddParticipantAboveLimit
+
+Dodaje uczestnika pomimo wyczerpania limitu uczestników
+
+```sql
+CREATE PROCEDURE [dbo].[uspAddParticipantAboveLimit]
+	@type_id INT,
+	@client_id int,
+	@product_id int
+AS
+BEGIN
+
+	SET NOCOUNT ON;
+	BEGIN TRY
+		DISABLE TRIGGER checkStudiesParticipantsLimit_trg on StudiesParticipants;
+		DISABLE TRIGGER checkStudiesMeetingLimit_studiesParticipants_trg on StudiesMeetingParticipants;
+		DISABLE TRIGGER checkStudiesMeetingLimit_outerParticipants_trg on OuterMeetingParticipants;
+		DISABLE TRIGGER checkCourseParticipantsLimit_trg on CoursesParticipants;
+		DISABLE TRIGGER checkIfClientPaidForStudies_outerParticipant_trg on OuterMeetingParticipants;
+		DISABLE TRIGGER checkIfClientPaidForStudiesMeeting_outerParticipant_trg on OuterMeetingParticipants;
+		DISABLE TRIGGER checkIfClientPaidForCourse_trg on CoursesParticipants;
+
+		begin transaction
+			exec uspAddWCSParticipant @type_id,@client_id,@product_id;
+			
+			INSERT INTO Orders(client_id)
+			values(@client_id)
+
+			DECLARE @order_id INT;
+			SET  @order_id= SCOPE_IDENTITY();
+			PRINT(@order_id)
+
+			DECLARE @is_advance BIT;
+			IF @type_id=2 or @type_id=3
+			BEGIN
+				SET @is_advance=1
+			END
+			ELSE
+			BEGIN
+				SET @is_advance=0
+			END
+
+			exec uspAddProductToOrder @order_id,@product_id,@is_advance;
+		commit transaction;
+
+		ENABLE TRIGGER checkStudiesParticipantsLimit_trg on StudiesParticipants;
+		ENABLE TRIGGER checkStudiesMeetingLimit_studiesParticipants_trg on StudiesMeetingParticipants;
+		ENABLE TRIGGER checkStudiesMeetingLimit_outerParticipants_trg on OuterMeetingParticipants;
+		ENABLE TRIGGER checkCourseParticipantsLimit_trg on CoursesParticipants;
+		ENABLE TRIGGER checkIfClientPaidForStudies_outerParticipant_trg on OuterMeetingParticipants;
+		ENABLE TRIGGER checkIfClientPaidForStudiesMeeting_outerParticipant_trg on OuterMeetingParticipants;
+		ENABLE TRIGGER checkIfClientPaidForCourse_trg on CoursesParticipants;
+
+		
+	END TRY
+	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+	        ROLLBACK TRAN
+		DECLARE @msg nvarchar(2048)=N'Błąd dodania uczestnika ponad limit: ' + ERROR_MESSAGE();
+		THROW 52000, @msg, 1;
+	END CATCH
+END
 ```
 
 ## Funkcje
