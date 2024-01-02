@@ -3910,6 +3910,15 @@ GRANT EXECUTE ON checkIfStudiesMeetingParticipantsAllowed to secretary
 GRANT EXECUTE ON GetStudiesMeetingAttendance to secretary
 GRANT EXECUTE ON GetCourseModuleAttendanceList to secretary
 GRANT EXECUTE ON GetProductName to secretary
+
+GRANT EXECUTE ON uspAddApprenticeship to secretary
+GRANT EXECUTE ON uspAddUser to secretary
+GRANT EXECUTE ON uspChangeMeetingDate to secretary
+GRANT EXECUTE ON uspAddCourse to secretary
+GRANT EXECUTE ON uspAddStudies to secretary
+GRANT EXECUTE ON uspAddStudiesMeetings to secretary
+GRANT EXECUTE ON uspAddWebinar to secretary
+
 ```
 ### Manager
 
@@ -3950,6 +3959,20 @@ GRANT EXECUTE ON checkIfStudiesMeetingParticipantsAllowed to manager
 GRANT EXECUTE ON GetStudiesMeetingAttendance to manager
 GRANT EXECUTE ON GetCourseModuleAttendanceList to manager
 GRANT EXECUTE ON GetProductName to manager
+
+GRANT EXECUTE ON uspAddApprenticeship to manager
+GRANT EXECUTE ON uspAddUser to manager
+GRANT EXECUTE ON uspChangeMeetingDate to manager
+GRANT EXECUTE ON uspAddCourse to manager
+GRANT EXECUTE ON uspAddStudies to manager
+GRANT EXECUTE ON uspAddStudiesMeetings to manager
+GRANT EXECUTE ON uspAddWebinar to manager
+GRANT EXECUTE ON uspSetCoursePrice to manager
+GRANT EXECUTE ON uspSetMeetingPrice to manager
+GRANT EXECUTE ON uspSetStudiesPrice to manager
+GRANT EXECUTE ON uspSetWebinarPrice to manager
+GRANT EXECUTE ON uspParticipantsLimit to manager
+GRANT EXECUTE ON uspDeleteProduct to manager
 ```
 
 ### Nauczyciel
@@ -3964,6 +3987,11 @@ GRANT SELECT ON getTaughtStudies to teacher
 GRANT SELECT ON getStudiesMeetingAttendanceList to teacher
 GRANT SELECT ON getCourseModuleAttendanceList to teacher
 GRANT SELECT ON getTaughtWebinars to teacher
+
+GRANT EXECUTE on uspAddExamResult to teacher
+GRANT EXECUTE on uspMeetingPresence to teacher
+GRANT EXECUTE on uspModulePresence to teacher
+GRANT EXECUTE on uspSetMeetingPresence to teacher
 ```
 
 ### Klient
@@ -3987,6 +4015,14 @@ GRANT SELECT on getStudiesmeetings to client
 GRANT SELECT on getRegisteredApprenticeship to client
 GRANT EXECUTE on CheckApprenticeshipStatus to client
 GRANT EXECUTE on checkParicipantsLimit to client
+
+GRANT EXECUTE on uspAddProductToOrder to client
+GRANT EXECUTE on uspCancelPayment to client
+GRANT EXECUTE on uspChangeToFullPrice to client
+GRANT EXECUTE on uspDeleteProductFromOrder to client
+GRANT EXECUTE on uspPay to client
+GRANT EXECUTE on uspAddOrder to client
+
 ```
 
 ### Właściciel
@@ -3996,6 +4032,100 @@ Create role owner
 
 grant all privileges ON u_stankiew to owner
 ```
+
+## Indeksy
+
+```sql
+-- imię i nazwisko użytkownika
+create index Users_first_name_last_name_index
+on Users (first_name, last_name)
+
+-- adres użytkownika
+create index Users_zip_code_city_street_address_country_index
+on Users (zip_code, city, street_address, country)
+
+--typ produktu
+create index Products_product_type_id_index
+on Products (product_type_id)
+
+--język
+create index Products_language_index
+on Products (language)
+
+--numer zamówienia
+create index Payments_order_id_index
+on Payments (order_id)
+
+--data zamówienia
+create index Payments_payment_date_index
+on Payments (payment_date)
+
+--nazwa webinaru
+create index Webinars_webinar_name_index
+on Webinars (webinar_name)
+
+--data publikacji webinaru
+create index Webinars_posted_date_index
+on Webinars (posted_date)
+
+--nazwa kursu
+create unique index Courses_course_name_uindex
+on Courses (course_name)
+
+--data rozpoczęcia i zakońćzenia kursu
+create unique index Courses_start_date_end_date_uindex
+on Courses (start_date, end_date)
+
+--nazwa modułu
+create unique index Uniq_Modules
+on Modules (module_name)
+
+--id modułu
+create index Modules_product_id_index
+on Modules (product_id)
+
+--data rozpoczęcia i zakońćzenia modułu
+create index Modules_start_date_end_date_index
+on Modules (start_date, end_date)
+
+--sala, w której odbywa się moduł
+create index Modules_classroom_index
+on Modules (classroom)
+
+--nazwa studiów
+create index Studies_name_index
+on Studies (name)
+
+--id klienta, który jest uczestnikiem studiów
+create index StudiesParticipants_client_id_index
+on StudiesParticipants (client_id)
+
+--id studiów
+create index StudiesParticipants_product_id_index
+on StudiesParticipants (product_id)
+
+--id studiów
+create index Exams_studies_id_index
+on Exams (studies_id)
+
+--data egzaminu
+create index Exams_date_index
+on Exams (date)
+
+--data praktyk i id uczestnika studiów
+create unique clustered index Apprenticeship_participant_id_date_uindex
+on Apprenticeship (participant_id, date)
+
+--id studiów
+create index StudiesMeetings_studies_id_index
+on StudiesMeetings (studies_id)
+
+--data studiów
+create index StudiesMeetings_date_index
+on StudiesMeetings (date)
+
+```
+
 
 ## Dane testowe
 
