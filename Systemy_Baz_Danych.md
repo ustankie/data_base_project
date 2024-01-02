@@ -3305,20 +3305,6 @@ BEGIN
 END
 ```
 
-#### CheckExamDate
-Pozwala sprawdzić maksymalną ilość punktów na egzaminie
-```sql
-CREATE FUNCTION checkExamDate(@exam_id int)
-    RETURNS date
-AS
-BEGIN
-    DECLARE @exam_date date
-    SET @exam_date = ISNULL((SELECT date
-                                    FROM Exams
-                                    WHERE exam_id = @exam_id), NULL)
-    RETURN @exam_date
-END
-```
 
 #### GetStudiesMeetings
 Umożliwia wyświetlenie wszystkich zaplanowanych spotkań na studiach
@@ -3540,7 +3526,7 @@ AS RETURN
 #### GetOwnedWebinars
 Umożliwia wyświetlenie zakupionych webinarów przez klienta
 ```sql
-CREATE FUNCTION getOwnedWebinars(@client_id int)
+CREATE FUNCTION [dbo].[getOwnedWebinars](@client_id int)
     RETURNS table
 AS RETURN
     SELECT webinar_name
@@ -3549,7 +3535,8 @@ AS RETURN
         INNER JOIN Order_details ON Products.product_id = Order_details.product_id
         INNER JOIN Orders ON Order_details.order_id = Orders.order_id
         INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
-    WHERE status_name = 'paid' AND client_id = @client_id
+		INNER JOIN Payments ON Payments.order_id=Orders.order_id
+    WHERE status_name = 'paid' AND client_id = @client_id AND DATEDIFF(d,payment_date,GETDATE())<=30
 ```
 #### GetOwnedStudies
 Umożliwia wyświetlenie zakupionych studiów przez klienta
@@ -3894,7 +3881,6 @@ GRANT EXECUTE ON ClientsApprenticeships to secretary
 GRANT EXECUTE ON CoursePass to secretary
 GRANT SELECT ON CourseInfo to secretary
 GRANT EXECUTE ON ModulesPresence to secretary
-GRANT EXECUTE ON GetProductName to secretary
 GRANT EXECUTE ON CoursesPresence to secretary
 GRANT EXECUTE ON CoursesFreeSlots to secretary
 GRANT SELECT ON ClientCourses to secretary
@@ -3904,12 +3890,22 @@ GRANT EXECUTE ON CheckExamStatus to secretary
 GRANT EXECUTE ON CheckExamDate to secretary
 GRANT SELECT ON GetStudiesMeetings to secretary
 GRANT SELECT ON GetRegisteredApprenticeship to secretary
-GRANT EXECUTE ON GetApprenticeshipStatus to secretary
-GRANT EXECUTE ON ParticipantsLimit to secretary
+GRANT EXECUTE ON checkApprenticeshipStatus to secretary
+GRANT EXECUTE ON checkParicipantsLimit to secretary
 GRANT EXECUTE ON checkIfStudiesMeetingParticipantsAllowed to secretary
-GRANT EXECUTE ON GetStudiesMeetingAttendance to secretary
-GRANT EXECUTE ON GetCourseModuleAttendanceList to secretary
-GRANT EXECUTE ON GetProductName to secretary
+GRANT SELECT ON GetStudiesMeetingAttendanceList to secretary
+GRANT SELECT ON GetCourseModuleAttendanceList to secretary
+GRANT EXECUTE ON checkIfClientPaid to secretary
+
+
+GRANT SELECT on clientCourses to secretary
+GRANT EXECUTE ON CheckIfCourseParticipantsAllowed to secretary
+GRANT SELECT on getExamScores to secretary
+GRANT EXECUTE on checkExamMaxPoints to secretary
+GRANT EXECUTE on CheckApprenticeshipStatus to secretary
+GRANT EXECUTE on checkParicipantsLimit to secretary
+
+
 
 GRANT EXECUTE ON uspAddApprenticeship to secretary
 GRANT EXECUTE ON uspAddUser to secretary
@@ -3943,7 +3939,6 @@ GRANT EXECUTE ON ClientsApprenticeships to manager
 GRANT EXECUTE ON CoursePass to manager
 GRANT SELECT ON CourseInfo to manager
 GRANT EXECUTE ON ModulesPresence to manager
-GRANT EXECUTE ON GetProductName to manager
 GRANT EXECUTE ON CoursesPresence to manager
 GRANT EXECUTE ON CoursesFreeSlots to manager
 GRANT SELECT ON ClientCourses to manager
@@ -3953,12 +3948,21 @@ GRANT EXECUTE ON CheckExamStatus to manager
 GRANT EXECUTE ON CheckExamDate to manager
 GRANT SELECT ON GetStudiesMeetings to manager
 GRANT SELECT ON GetRegisteredApprenticeship to manager
-GRANT EXECUTE ON GetApprenticeshipStatus to manager
-GRANT EXECUTE ON ParticipantsLimit to manager
+GRANT EXECUTE ON checkApprenticeshipStatus to manager
+GRANT EXECUTE ON checkParicipantsLimit to manager
 GRANT EXECUTE ON checkIfStudiesMeetingParticipantsAllowed to manager
-GRANT EXECUTE ON GetStudiesMeetingAttendance to manager
-GRANT EXECUTE ON GetCourseModuleAttendanceList to manager
-GRANT EXECUTE ON GetProductName to manager
+GRANT SELECT ON GetStudiesMeetingAttendanceList to manager
+GRANT SELECT ON GetCourseModuleAttendanceList to manager
+GRANT EXECUTE ON checkIfClientPaid to manager
+GRANT EXECUTE ON CheckIfCourseParticipantsAllowed to manager
+GRANT SELECT on getExamScores to manager
+
+GRANT SELECT on clientCourses to manager
+GRANT EXECUTE on checkExamMaxPoints to manager
+GRANT EXECUTE on CheckApprenticeshipStatus to manager
+GRANT EXECUTE on checkParicipantsLimit to manager
+GRANT SELECT ON getPaymentHistory to manager
+
 
 GRANT EXECUTE ON uspAddApprenticeship to manager
 GRANT EXECUTE ON uspAddUser to manager
@@ -3971,7 +3975,7 @@ GRANT EXECUTE ON uspSetCoursePrice to manager
 GRANT EXECUTE ON uspSetMeetingPrice to manager
 GRANT EXECUTE ON uspSetStudiesPrice to manager
 GRANT EXECUTE ON uspSetWebinarPrice to manager
-GRANT EXECUTE ON uspParticipantsLimit to manager
+GRANT EXECUTE ON uspSetParticipantsLimit to manager
 GRANT EXECUTE ON uspDeleteProduct to manager
 ```
 
@@ -3989,8 +3993,8 @@ GRANT SELECT ON getCourseModuleAttendanceList to teacher
 GRANT SELECT ON getTaughtWebinars to teacher
 
 GRANT EXECUTE on uspAddExamResult to teacher
-GRANT EXECUTE on uspMeetingPresence to teacher
-GRANT EXECUTE on uspModulePresence to teacher
+GRANT EXECUTE on uspAddMeetingPresence to teacher
+GRANT EXECUTE on uspAddModulePresence to teacher
 GRANT EXECUTE on uspSetMeetingPresence to teacher
 ```
 
@@ -4015,6 +4019,16 @@ GRANT SELECT on getStudiesmeetings to client
 GRANT SELECT on getRegisteredApprenticeship to client
 GRANT EXECUTE on CheckApprenticeshipStatus to client
 GRANT EXECUTE on checkParicipantsLimit to client
+
+GRANT SELECT on getOwnedWebinars to client
+GRANT SELECT on getOwnedStudies to client
+GRANT SELECT on getOwnedStudiesMeetings to client
+GRANT SELECT on getOwnedCourses to client
+GRANT SELECT on clientCourses to client
+GRANT EXECUTE ON CheckIfCourseParticipantsAllowed to client
+GRANT EXECUTE ON StudiesPass to client
+GRANT SELECT ON getBucket to client
+GRANT SELECT ON getPaymentHistory to client
 
 GRANT EXECUTE on uspAddProductToOrder to client
 GRANT EXECUTE on uspCancelPayment to client
