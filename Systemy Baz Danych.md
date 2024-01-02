@@ -2553,8 +2553,8 @@ END
 
 ### Ogólne
 
-#### GetProductName
-Umożliwia konwersję id productu na nazwę, wykorzystrywana w innych funkcjach i widokach
+##### GetProductName
+Umożliwia konwersję id produktu na nazwę, wykorzystywaną w innych funkcjach i widokach
 ```sql
 CREATE FUNCTION getProductName(@product_id int)
     RETURNS nvarchar(50)
@@ -2614,6 +2614,28 @@ AS
         END
     END
 ```
+#### CheckIfClientPaid
+Sprawdza czy dany klient zapłacił za dany produkt
+```sql
+CREATE FUNCTION checkIfClientPaid(@client_id int, @product_id int)
+    RETURNS bit
+BEGIN
+    DECLARE @payment_status nvarchar(50)
+    SET @payment_status = ISNULL((SELECT status_name
+                                  FROM Orders
+                                           INNER JOIN Order_details ON Orders.order_id = Order_details.order_id
+                                           INNER JOIN Statuses ON Orders.payment_status = Statuses.status_id
+                                  WHERE
+                                          Order_details.product_id = @product_id AND
+                                          Orders.client_id = @client_id), 'none')
+
+    IF @payment_status = 'paid' OR @payment_status = 'partially_paid' BEGIN
+        RETURN 1
+    END
+    RETURN 0
+END
+```
+
 ### Sekretarz
 
 #### ClientsExams
@@ -2769,9 +2791,38 @@ CREATE FUNCTION clientCourses(@client_id int)
 		WHERE o.client_id=@client_id
 ```
 
+#### CheckIfCourseParticipantsAllowed
+
+Sprawdza czy do kursu można dopisać więcej osób - czy limit miejsc nie został jeszcze przekroczony
+
+```sql
+CREATE FUNCTION checkIfCourseParticipantsAllowed(@product_id int)
+        RETURNS bit
+    AS
+        BEGIN
+            DECLARE @participant_limit int
+            DECLARE @participants_count int
+
+            SET @participants_count = ISNULL((SELECT COUNT(*)
+                                              FROM CoursesParticipants
+                                              WHERE product_id = @product_id
+                                              GROUP BY product_id), 0)
+
+            SET @participant_limit = ISNULL((SELECT participants_limit
+                                             FROM Courses
+                                             WHERE product_id = @product_id), 0)
+
+
+            IF @participants_count > @participant_limit BEGIN
+                RETURN 0
+            END
+            RETURN 1
+END
+```
+
 ### Studia
 ##### StudiesPass
-Umożliwia sprawdzenie czy dany uczesnik studiów zaliczył studia
+Umożliwia sprawdzenie czy dany uczestnik studiów zaliczył studia
 ```sql
 CREATE FUNCTION studiesPass(@participant_id int)
     RETURNS bit
@@ -2958,7 +3009,7 @@ go
 
 ```
 
-####
+#### CheckIfStudiesMeetingParticipantsAllowed
 Pozwala sprawdzić czy do listy uczestników spotkania na studiach można dopisać więcej osób
 ```sql
 CREATE FUNCTION checkIfStudiesMeetingParticipantsAllowed(@meeting_id int)
@@ -2987,6 +3038,32 @@ AS
         END
         RETURN 1
     END
+```
+
+#### CheckIfStudiesParticipantsAllowed
+Pozwala sprawdzić czy limit uczestników zapisanych na dane studia nie został przekroczony
+
+```sql
+CREATE FUNCTION checkIfStudiesParticipantsAllowed(@product_id int)
+    RETURNS bit
+AS
+BEGIN
+    DECLARE @participant_limit int
+    DECLARE @participants_count int
+
+    SET @participants_count = ISNULL((SELECT COUNT(*)
+                                             FROM StudiesParticipants
+                                             WHERE product_id = @product_id
+                                             GROUP BY product_id), 0)
+
+    SET @participant_limit = dbo.checkParicipantsLimit(@product_id)
+
+
+    IF @participants_count > @participant_limit BEGIN
+        RETURN 0
+    END
+    RETURN 1
+END
 ```
 
 ### Nauczyciel
@@ -3185,7 +3262,7 @@ go
 
 ### Studia
 
-#### checkStudiesMeetingLimit
+#### CheckStudiesMeetingLimit
 Przy dodawaniu nowych uczestników spotkań sprawdza czy nie został przekroczony limit miejsc na spotkaniu na studiach podczas wpisywania do 
 tabeli `StudiesMeetingParticipants` lub `OuterMeetingParticipants`
 ```sql
@@ -3362,6 +3439,191 @@ Create role owner
 grant all privileges ON u_stankiew to owner
 ```
 
+
+#### CheckStudiesParticipantsLimit
+Przy dodawaniu nowych uczestników na studia do tabli `StudiesParticipants`, sprawdza czy limit zapisanych uczestników nie został przekroczony
+
+```sql
+CREATE TRIGGER checkStudiesParticipantsLimit_trg
+    ON StudiesParticipants
+    AFTER INSERT
+    AS
+BEGIN
+    SET NOCOUNT ON
+    DECLARE @studies_id int
+
+
+    DECLARE curs CURSOR FOR
+        (SELECT product_id FROM inserted)
+
+    OPEN curs
+
+    FETCH NEXT FROM curs INTO @studies_id
+    WHILE @@FETCH_STATUS = 0 BEGIN
+        IF NOT dbo.checkIfStudiesParticipantsAllowed (@studies_id) = 1 BEGIN
+            RAISERROR(N'Studies Participants limit exceeded', 12, 1)
+        END
+
+        FETCH NEXT FROM curs INTO @studies_id
+    END
+    CLOSE curs
+    DEALLOCATE curs
+END
+```
+
+#### CheckIfClientPaiForStudies
+Podczas wpisywania do tabeli `StudiesParticipants` sprawdza czy wpisywany klient zapłacił za studia
+```sql
+CREATE TRIGGER checkIfClientPaidForStudies_trg
+        ON StudiesParticipants
+        AFTER INSERT
+AS
+    BEGIN
+        SET NOCOUNT ON
+        DECLARE @client_id int
+        DECLARE @product_id int
+
+        DECLARE curs CURSOR FOR
+            (SELECT client_id, product_id FROM inserted)
+
+        OPEN curs
+
+        FETCH NEXT FROM curs INTO @client_id, @product_id
+        WHILE @@FETCH_STATUS = 0 BEGIN
+            IF NOT dbo.checkIfClientPaid(@client_id, @product_id) = 1 BEGIN
+                RAISERROR(N'Client did not pay for the product', 12, 1)
+            END
+
+            FETCH NEXT FROM curs INTO @client_id, @product_id
+        END
+        CLOSE curs
+        DEALLOCATE curs
+    END
+```
+
+#### CheckIfClientPaidForStudiesMeeting
+Podczas wpisywania do tabeli `OuterMeetingParticipants` sprawdza czy wpisywani klienci mają status zamówienia jako zapłacony.
+
+```sql
+CREATE TRIGGER checkIfClientPaidForStudiesMeeting_outerParticipant_trg
+    ON OuterMeetingParticipants
+    AFTER INSERT
+    AS
+BEGIN
+    SET NOCOUNT ON
+    DECLARE @client_id int
+    DECLARE @meeting_id int
+
+    DECLARE curs CURSOR FOR
+        (SELECT client_id, meeting_id FROM inserted)
+
+    OPEN curs
+
+    FETCH NEXT FROM curs INTO @client_id, @meeting_id
+    WHILE @@FETCH_STATUS = 0 BEGIN
+        IF NOT dbo.checkIfClientPaid(@client_id, @meeting_id) = 1 BEGIN
+            RAISERROR(N'Client did not pay for the product', 12, 1)
+        END
+
+        FETCH NEXT FROM curs INTO @client_id, @meeting_id
+    END
+    CLOSE curs
+    DEALLOCATE curs
+END
+```
+
+### Kursy
+#### CheckCourseParticipantsLimit
+Przy wpisywaniu do tabeli `CoursesParticipants` sprawdza czy limit uczestników zapisanych na kurs nie został przekroczony
+
+```sql
+CREATE TRIGGER checkCourseParticipantsLimit_trg
+    ON CoursesParticipants
+    AFTER INSERT
+    AS
+BEGIN
+    SET NOCOUNT ON
+    DECLARE @course_id int
+
+    DECLARE curs CURSOR FOR
+        (SELECT product_id FROM inserted)
+
+    OPEN curs
+
+    FETCH NEXT FROM curs INTO @course_id
+    WHILE @@FETCH_STATUS = 0 BEGIN
+        IF NOT dbo.checkIfCourseParticipantsAllowed(@course_id) = 1 BEGIN
+            RAISERROR(N'Course Participants limit exceeded', 12, 1)
+        END
+
+        FETCH NEXT FROM curs INTO @course_id
+    END
+    CLOSE curs
+    DEALLOCATE curs
+END
+```
+
+#### CheckIfClientPaidForCourse
+Przy wpisywaniu do tabeli `CoursesParticipants` sprawdza czy klient zapłacił za dany kurs
+
+```sql
+CREATE TRIGGER checkIfClientPaidForCourse_trg
+    ON CoursesParticipants
+    AFTER INSERT
+    AS
+BEGIN
+    SET NOCOUNT ON
+    DECLARE @client_id int
+    DECLARE @product_id int
+
+    DECLARE curs CURSOR FOR
+        (SELECT client_id, product_id FROM inserted)
+
+    OPEN curs
+
+    FETCH NEXT FROM curs INTO @client_id, @product_id
+    WHILE @@FETCH_STATUS = 0 BEGIN
+        IF NOT dbo.checkIfClientPaid(@client_id, @product_id) = 1 BEGIN
+            RAISERROR(N'Client did not pay for the product', 12, 1)
+        END
+
+        FETCH NEXT FROM curs INTO @client_id, @product_id
+    END
+    CLOSE curs
+    DEALLOCATE curs
+END
+```
+
+### Webinary
+Przy wpisywaniu do tabeli `WebinarParticipants` sprawdza czy klient zapłacił za webinar.
+
+```sql
+CREATE TRIGGER checkIfClientPaidForWebinar_trg
+    ON WebinarParticipants
+    AFTER INSERT
+    AS
+BEGIN
+    SET NOCOUNT ON
+    DECLARE @product_id int
+    DECLARE @client_id int
+
+    DECLARE curs CURSOR FOR
+        (SELECT product_id, client_id FROM inserted)
+
+    OPEN curs
+
+    FETCH NEXT FROM curs INTO @product_id, @client_id
+    WHILE @@FETCH_STATUS = 0 BEGIN
+        IF NOT dbo.checkIfClientPaid(@client_id, @product_id) = 1 BEGIN
+            RAISERROR(N'Client did not pay for the product', 12, 1)
+        END
+
+        FETCH NEXT FROM curs INTO @product_id, @client_id
+    END
+    CLOSE curs
+    DEALLOCATE curs
+END
+```
 
 ## Dane testowe
 
