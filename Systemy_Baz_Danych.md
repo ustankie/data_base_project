@@ -168,14 +168,17 @@ create table Users
 )
 go
 
-create index Users_first_name_last_name_index
-    on Users (first_name, last_name)
+create index Users_last_name_index
+    on Users (last_name)
 go
 
-create index Users_zip_code_city_street_address_country_index
-    on Users (zip_code, city, street_address, country)
+create index Users_zip_code_index
+    on Users (zip_code)
 go
 
+create index Users_country_index
+    on Users (country)
+go
 ```
 
 #### Academics
@@ -597,8 +600,8 @@ create index Modules_product_id_index
     on Modules (product_id)
 go
 
-create index Modules_start_date_end_date_index
-    on Modules (start_date, end_date)
+create index Modules_start_date_index
+    on Modules (start_date)
 go
 
 create index Modules_classroom_index
@@ -873,15 +876,16 @@ CREATE VIEW [dbo].[BorrowersList] AS
 	Select client_id, order_id
 	From Orders as o
 	Where order_id in ( Select order_id
-			From Order_details as od
-			inner join 
-			(Select product_id as p_id, posted_date from Webinars where posted_date <= GETDATE()
-			UNION Select product_id as p_id, start_date from Courses where start_date <= GETDATE()
-			UNION Select studies_id as p_id, min(date)
-				from StudiesMeetings group by studies_id having (MIN(date)) <= GETDATE( ))
-			as p
-			on p.p_id=od.product_id)
-	and not( payment_status = 1)
+					From Order_details as od
+						inner join 
+						(Select product_id as p_id, posted_date from Webinars where posted_date <= GETDATE()
+						UNION Select product_id as p_id, start_date from Courses where start_date <= GETDATE()
+						UNION Select studies_id as p_id, min(date) from StudiesMeetings group by studies_id having (MIN(date)) <= GETDATE( ))
+						as p
+						on p.p_id=od.product_id)
+						and not( payment_status = 1)
+
+go
 ```
 
 #### PastEvents
@@ -889,7 +893,7 @@ CREATE VIEW [dbo].[BorrowersList] AS
 Raport dotyczący frekwencji na danym wydarzeniu (moduł, spotkanie ze studiów) wraz z podstawowymi informacjami
 
 ```sql
-CREATE VIEW PastEventsAttendance
+CREATE VIEW [dbo].[PastEventsAttendance]
 AS
 SELECT p.product_id, pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, mt.type_name as type, COUNT(mp.client_id) as attendance
 FROM StudiesMeetings as sm
@@ -915,7 +919,7 @@ FROM Modules as m
 	join MeetingType as mt on mt.type_id=m.module_type
 	join ProductType as pt on pt.product_type_id=p.product_type_id
 GROUP BY p.product_id, pt.product_type_name, c.course_name, m.module_id, m.start_date, mt.type_name
-GO
+go
 ```
 
 #### EventsThisMonth
@@ -923,7 +927,7 @@ GO
 Spis webinarów, modułów oraz spotkań ze studiów, które odbywają się w aktualnym miesiącu
 
 ```sql
-CREATE VIEW EventsThisMonth
+CREATE VIEW [dbo].[EventsThisMonth]
 AS
 SELECT p.product_id, pt.product_type_name as category, s.name as product_name, sm.meeting_id as id, sm.date as date, mt.type_name  as type
 FROM StudiesMeetings as sm
@@ -943,7 +947,7 @@ FROM Modules as m
 	inner join Products as p on p.product_id=c.product_id
 	join MeetingType as mt on mt.type_id = m.module_type
 	join ProductType as pt on pt.product_type_id=p.product_type_id
-GO
+go
 ```
 
 #### Exams Stats
@@ -957,6 +961,7 @@ SELECT e.studies_id as studies, e.exam_id as exam, e.max_points as max_points, A
 FROM Exams as e
 	inner join ExamsTaken as et on et.exam_id=e.exam_id
 GROUP BY e.studies_id, e.exam_id, e.max_points
+go
 ```
 #### StudentsApprenticeships
 
@@ -968,6 +973,7 @@ AS
 SELECT a.participant_id, COUNT(a.date) as apprenticeships_taken
 FROM Apprenticeship as a
 GROUP BY a.participant_id
+go
 ```
 
 #### Bilocations
@@ -981,13 +987,14 @@ CREATE VIEW [dbo].[Bilocations] As
 	inner join Orders as o on c.can_pay_days_later=o.client_id
 	inner join Order_details as od on od.order_id=o.order_id
 	inner join( Select m.module_id as p_id, start_date as date from Modules as m where  not m.module_type = 1
-		UNION
-		Select sm.meeting_id as p_id, sm.date as date from StudiesMeetings as sm where not sm.type_id = 1
-		UNION
-		Select w.product_id as p_id, w.posted_date as date from Webinars as w
-		UNION
-		Select sm.student_price as p_id, sm.date as date from StudiesMeetings as sm where not sm.type_id = 1) as p
-	on p.p_id = od.product_id
+			UNION
+			Select sm.meeting_id as p_id, sm.date as date from StudiesMeetings as sm where not sm.type_id = 1
+			UNION
+			Select w.product_id as p_id, w.posted_date as date from Webinars as w
+			UNION
+			Select sm.student_price as p_id, sm.date as date from StudiesMeetings as sm where not sm.type_id = 1
+			) as p
+			on p.p_id = od.product_id
 	where p.date >= GETDATE()
 	group by c.client_id, p.date
 ```
@@ -996,21 +1003,21 @@ CREATE VIEW [dbo].[Bilocations] As
 #### Financial Report
 Przedstawia podsumowanie finansowe 
 ```sql
-CREATE VIEW FinancialReport AS
-SELECT Products.product_id, dbo.getProductName(Products.product_id) AS product_name, product_type_name, SUM(price) AS 		total_income
+CREATE VIEW [dbo].[FinancialReport] AS
+SELECT Products.product_id, dbo.getProductName(Products.product_id) AS product_name, product_type_name, SUM(price) AS total_income
 FROM Payments
          INNER JOIN Orders ON Payments.order_id = Orders.order_id
          INNER JOIN Order_details ON Orders.order_id = Order_details.order_id
          INNER JOIN Products ON Order_details.product_id = Products.product_id
          INNER JOIN ProductType ON Products.product_type_id = ProductType.product_type_id
 GROUP BY Products.product_id, Products.product_id, product_type_name
-GO
+go
 ```
 
 #### GraduationCandidates
 Przedstawia listę osób które zaliczyły studia lub kurs - są kandydatami do otrzymania certyfikatu
 ```sql
-CREATE VIEW GraduationCandidates AS
+CREATE VIEW [dbo].[GraduationCandidates] AS
     SELECT Clients.client_id, first_name, last_name, dbo.getProductName(product_id) AS product_name
     FROM StudiesParticipants
         INNER JOIN Clients ON StudiesParticipants.client_id = Clients.client_id
@@ -1022,14 +1029,13 @@ CREATE VIEW GraduationCandidates AS
         INNER JOIN Clients ON CoursesParticipants.client_id = Clients.client_id
         INNER JOIN Users ON Clients.client_id = Users.user_id
     WHERE dbo.coursePass(participant_id) = 1
-GO
-
+go
 ```
 
 #### All Meetings
 Wyświetla daty wszystkich spotkań 
 ```sql
-CREATE VIEW AllMeetings AS
+CREATE VIEW [dbo].[AllMeetings] AS
     SELECT product_id,'Module' AS type, module_name AS title, start_date AS date
     FROM Modules
     UNION
@@ -1038,7 +1044,7 @@ CREATE VIEW AllMeetings AS
     UNION
     SELECT product_id, 'Webinar' AS type, webinar_name, posted_date AS date
     FROM Webinars
-GO
+go
 ```
 
 ## Procedury
@@ -4051,91 +4057,110 @@ grant all privileges ON u_stankiew to owner
 
 ```sql
 -- imię i nazwisko użytkownika
-create index Users_first_name_last_name_index
-on Users (first_name, last_name)
+create index Users_last_name_index
+    on Users (last_name)
+go
 
 -- adres użytkownika
-create index Users_zip_code_city_street_address_country_index
-on Users (zip_code, city, street_address, country)
+create index Users_zip_code_index
+    on Users (zip_code)
+go
 
 --typ produktu
 create index Products_product_type_id_index
-on Products (product_type_id)
+    on Products (product_type_id)
+go
 
 --język
 create index Products_language_index
-on Products (language)
+    on Products (language)
+go
 
 --numer zamówienia
 create index Payments_order_id_index
-on Payments (order_id)
+    on Payments (order_id)
+go
 
 --data zamówienia
 create index Payments_payment_date_index
-on Payments (payment_date)
+    on Payments (payment_date)
+go
 
 --nazwa webinaru
 create index Webinars_webinar_name_index
-on Webinars (webinar_name)
+    on Webinars (webinar_name)
+go
 
 --data publikacji webinaru
 create index Webinars_posted_date_index
-on Webinars (posted_date)
+    on Webinars (posted_date)
+go
 
 --nazwa kursu
 create unique index Courses_course_name_uindex
-on Courses (course_name)
+    on Courses (course_name)
+go
 
 --data rozpoczęcia i zakońćzenia kursu
 create unique index Courses_start_date_end_date_uindex
-on Courses (start_date, end_date)
-
+    on Courses (start_date, end_date)
+go
 --nazwa modułu
 create unique index Uniq_Modules
-on Modules (module_name)
+    on Modules (module_name)
+go
 
 --id modułu
 create index Modules_product_id_index
-on Modules (product_id)
+    on Modules (product_id)
+go
 
 --data rozpoczęcia i zakońćzenia modułu
-create index Modules_start_date_end_date_index
-on Modules (start_date, end_date)
+create index Modules_start_date_index
+    on Modules (start_date)
+go
 
 --sala, w której odbywa się moduł
 create index Modules_classroom_index
-on Modules (classroom)
+    on Modules (classroom)
+go
 
 --nazwa studiów
 create index Studies_name_index
-on Studies (name)
+    on Studies (name)
+go
 
 --id klienta, który jest uczestnikiem studiów
 create index StudiesParticipants_client_id_index
-on StudiesParticipants (client_id)
-
+    on StudiesParticipants (client_id)
+go
 --id studiów
 create index StudiesParticipants_product_id_index
-on StudiesParticipants (product_id)
+    on StudiesParticipants (product_id)
+go
 
 --id studiów
 create index Exams_studies_id_index
-on Exams (studies_id)
+    on Exams (studies_id)
+go
 
 --data egzaminu
 create index Exams_date_index
-on Exams (date)
+    on Exams (date)
+go
 
 --data praktyk i id uczestnika studiów
 create unique clustered index Apprenticeship_participant_id_date_uindex
-on Apprenticeship (participant_id, date)
+    on Apprenticeship (participant_id, date)
+go
 
 --id studiów
 create index StudiesMeetings_studies_id_index
-on StudiesMeetings (studies_id)
-
+    on StudiesMeetings (studies_id)
+go
 --data studiów
 create index StudiesMeetings_date_index
-on StudiesMeetings (date)
+    on StudiesMeetings (date)
+go
 
 ```
