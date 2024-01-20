@@ -524,9 +524,7 @@ create table Courses
         constraint participants_limit
             check ([participants_limit] >= 0),
     advance_price      money
-        constraint df_advance_price default 50.00 not null,
     full_price         money
-        constraint df_full_price default 400.00   not null,
     constraint ch_advance_price
         check ([advance_price] < [full_price] AND [advance_price] >= 0),
     constraint ch_end_date
@@ -654,11 +652,9 @@ create table Studies
         constraint check_praticipant_limit
             check ([participants_limit] > 0),
     full_price         money
-        constraint df_studies_full_price default 7000.00 not null
         constraint check_full_price
             check ([full_price] >= 0),
     advance_price      money
-        constraint df_studies_advance_price default 100.00,
     constraint check_advance_price
         check ([advance_price] <= [Studies].[full_price] AND [advance_price] >= 0)
 )
@@ -820,7 +816,6 @@ create table StudiesMeetings
             on update cascade on delete cascade,
     participants_limit      int default 300                  not null,
     student_price           money
-        constraint df_student_price default 60.00            not null
         constraint check_student_price
             check ([student_price] >= 0),
     outer_participant_price money
