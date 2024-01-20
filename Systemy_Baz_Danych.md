@@ -1570,7 +1570,7 @@ BEGIN
 		IF NOT EXISTS(
 			SELECT *
 			FROM Studies
-			WHERE name=@studies_id
+			WHERE product_id=@studies_id
 		) 
 		BEGIN
 			;
@@ -1997,6 +1997,15 @@ BEGIN
 			;
 			THROW 52000, N'Takie spotkanie nie istnieje',1 
 		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM StudiesParticipants
+			where @participant_id=participant_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki uczestnik nie istnieje',1 
+		END
 
 		INSERT INTO StudiesMeetingParticipants(participant_id,meeting_id,presence)
 		values(@participant_id,@product_id,@presence)
@@ -2033,6 +2042,15 @@ BEGIN
 		BEGIN
 			;
 			THROW 52000, N'Takie spotkanie nie istnieje',1 
+		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM StudiesParticipants
+			where @participant_id=participant_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki uczestnik nie istnieje',1 
 		END
 
 		UPDATE StudiesMeetingParticipants
@@ -2073,7 +2091,15 @@ BEGIN
 			;
 			THROW 52000, N'Taki moduł nie istnieje',1 
 		END
-
+		IF NOT EXISTS(
+			SELECT *
+			FROM StudiesParticipants
+			where @participant_id=participant_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki uczestnik nie istnieje',1 
+		END
 		INSERT INTO ModulesAttendance(participant_id,module_id,presence)
 		values(@participant_id,@module_id,@presence)
 	
@@ -2874,7 +2900,33 @@ CREATE PROCEDURE [dbo].[uspAddParticipantAboveLimit]
 	@product_id int
 AS
 BEGIN
-
+	IF NOT EXISTS(
+		SELECT *
+		FROM Clients
+		where @client_id=client_id
+	)
+	BEGIN
+		;
+		THROW 52000, N'Taki klient nie istnieje',1 
+	END
+	IF NOT EXISTS(
+		SELECT *
+		FROM Products
+		where @product_id=product_id
+	)
+	BEGIN
+		;
+		THROW 52000, N'Taki produkt nie istnieje',1 
+	END
+	IF NOT EXISTS(
+		SELECT *
+		FROM ProductType
+		where @type_id=product_type_id
+	)
+	BEGIN
+		;
+		THROW 52000, N'Taki typ produktu nie istnieje',1 
+	END
 	SET NOCOUNT ON;
 	BEGIN TRY
 		DISABLE TRIGGER checkStudiesParticipantsLimit_trg on StudiesParticipants;
@@ -3200,7 +3252,7 @@ END
 
 ### Studia
 ##### StudiesPass
-Umożliwia sprawdzenie czy dany uczestnik studiów zaliczył studia
+Umożliwia sprawdzenie czy dany uczestnik studiów zaliczył studia - wystarczy jedynie participant_id, ponieważ jest on unikalny i identyfikuje danego klienta od razu w kontekście studiów.
 ```sql
 CREATE FUNCTION studiesPass(@participant_id int)
     RETURNS bit
