@@ -2109,7 +2109,7 @@ END
 ```
 ### SetModulePresence
 
-Zmienia status obecności danego użytkownika na module.
+Zmienia status obecności danego użytkownika na module. 
 
 ```sql
 CREATE PROCEDURE [dbo].[uspSetModulePresence]
@@ -2129,6 +2129,15 @@ BEGIN
 		BEGIN
 			;
 			THROW 52000, N'Taki moduł nie istnieje',1 
+		END
+		IF NOT EXISTS(
+			SELECT *
+			FROM StudiesParticipants
+			where @participant_id=participant_id
+		)
+		BEGIN
+			;
+			THROW 52000, N'Taki uczestnik nie istnieje',1 
 		END
 
 		UPDATE ModulesAttendance
