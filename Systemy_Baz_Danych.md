@@ -3441,11 +3441,11 @@ AS RETURN
 
 ```
 
-#### GetTaughtWebinars
+#### GetTaughtCourses
 Umożliwia wyświetlenie prowadzonych przez nauczyciela kurśów
 ```sql
 
-CREATE FUNCTION getTaughtCurses(@academic_id int)
+CREATE FUNCTION getTaughtCourses(@academic_id int)
     RETURNS table
 AS RETURN
     SELECT course_name, Courses.product_id
